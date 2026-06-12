@@ -13,7 +13,7 @@
 </head>
 <body>
   <div class="ticker" id="market-ticker">
-    <div class="ticker-label">Mercado</div>
+    <div class="ticker-label" data-i18n="ticker.label">Mercado</div>
     <div class="ticker-track" id="ticker-track">
       <span class="ticker-item">Carregando cotações...</span>
     </div>
@@ -25,17 +25,21 @@
         <img src="/assets/logo.png" alt="DevBrief News" class="brand-logo" width="44" height="44">
         <div class="brand-text">
           <span class="brand-name">DevBrief <span class="brand-highlight">News</span></span>
-          <span class="brand-tagline">Inteligência diária para quem decide</span>
+          <span class="brand-tagline" data-i18n="brand.tagline">Inteligência diária para quem decide</span>
         </div>
       </a>
       <nav class="main-nav" aria-label="Seções">
-        <a href="#brasil">Brasil</a>
-        <a href="#mundo">Mundo</a>
-        <a href="#tecnologia">Tecnologia</a>
-        <a href="#mercado">Mercado</a>
-        <a href="#newsletter" class="nav-cta">Newsletter</a>
+        <a href="#brasil" data-i18n="nav.brasil">Brasil</a>
+        <a href="#mundo" data-i18n="nav.mundo">Mundo</a>
+        <a href="#tecnologia" data-i18n="nav.tecnologia">Tecnologia</a>
+        <a href="#mercado" data-i18n="nav.mercado">Mercado</a>
+        <a href="#newsletter" class="nav-cta" data-i18n="nav.newsletter">Newsletter</a>
       </nav>
       <div class="header-actions">
+        <div class="lang-toggle" role="group" aria-label="Idioma">
+          <button type="button" class="lang-btn active" data-lang-btn="pt" aria-pressed="true">PT-BR</button>
+          <button type="button" class="lang-btn" data-lang-btn="en" aria-pressed="false">EN</button>
+        </div>
         <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema">
           <span class="theme-icon theme-icon-light">☀️</span>
           <span class="theme-icon theme-icon-dark">🌙</span>
@@ -46,8 +50,8 @@
   </header>
 
   <div class="breaking-bar" id="breaking-bar" hidden>
-    <span class="breaking-badge">URGENTE</span>
-    <p id="breaking-text">Monitorando notícias de alto impacto...</p>
+    <span class="breaking-badge" data-i18n="breaking.badge">URGENTE</span>
+    <p id="breaking-text" data-i18n="breaking.default">Monitorando notícias de alto impacto...</p>
   </div>
 
   <main>
@@ -63,7 +67,7 @@
       </div>
       <aside class="hero-sidebar">
         <div class="panel market-panel">
-          <h2>📈 Mercado agora</h2>
+          <h2 data-i18n="market.title">📈 Mercado agora</h2>
           <ul class="market-list" id="market-list">
             <li class="skeleton-text"></li>
             <li class="skeleton-text"></li>
@@ -71,17 +75,17 @@
           </ul>
         </div>
         <div class="panel newsletter-panel" id="newsletter">
-          <h2>📬 Receba no e-mail</h2>
-          <p>Briefing diário às 07h, alertas urgentes e resumo de mercado — grátis.</p>
+          <h2 data-i18n="newsletter.title">📬 Receba no e-mail</h2>
+          <p data-i18n="newsletter.desc">Briefing diário às 07h, alertas urgentes e resumo de mercado — grátis.</p>
           <form class="subscribe-form" id="subscribe-form">
-            <input type="email" name="email" placeholder="seu@email.com" required autocomplete="email">
-            <button type="submit">Assinar grátis</button>
+            <input type="email" name="email" data-i18n="newsletter.placeholder" data-i18n-attr="placeholder" placeholder="seu@email.com" required autocomplete="email">
+            <button type="submit" data-i18n="newsletter.submit">Assinar grátis</button>
           </form>
           <p class="form-feedback" id="form-feedback" role="status"></p>
           <ul class="newsletter-perks">
-            <li>✅ Resumo completo todo dia</li>
-            <li>✅ Alertas de breaking news</li>
-            <li>✅ Cotações e mercado financeiro</li>
+            <li data-i18n="newsletter.perk1">✅ Resumo completo todo dia</li>
+            <li data-i18n="newsletter.perk2">✅ Alertas de breaking news</li>
+            <li data-i18n="newsletter.perk3">✅ Cotações e mercado financeiro</li>
           </ul>
         </div>
       </aside>
@@ -89,7 +93,7 @@
 
     <section class="latest container">
       <div class="section-head">
-        <h2>Últimas notícias</h2>
+        <h2 data-i18n="latest.title">Últimas notícias</h2>
         <span class="updated-label" id="updated-label"></span>
       </div>
       <div class="news-grid" id="latest-grid">
@@ -102,32 +106,32 @@
 
     <section class="category-section container" id="brasil" data-category="brasil">
       <div class="section-head category-head brasil">
-        <h2>🇧🇷 Brasil</h2>
-        <a href="#newsletter">Receber resumo diário →</a>
+        <h2 data-i18n="section.brasil">🇧🇷 Brasil</h2>
+        <a href="#newsletter" data-i18n="section.brasil.link">Receber resumo diário →</a>
       </div>
       <div class="category-grid" id="grid-brasil"></div>
     </section>
 
     <section class="category-section container" id="mercado" data-category="mercado">
       <div class="section-head category-head mercado">
-        <h2>📈 Mercado &amp; Economia</h2>
-        <a href="#newsletter">Alertas de mercado →</a>
+        <h2 data-i18n="section.mercado">📈 Mercado &amp; Economia</h2>
+        <a href="#newsletter" data-i18n="section.mercado.link">Alertas de mercado →</a>
       </div>
       <div class="category-grid wide" id="grid-mercado"></div>
     </section>
 
     <section class="category-section container" id="tecnologia" data-category="tecnologia">
       <div class="section-head category-head tech">
-        <h2>💻 Tecnologia</h2>
-        <a href="#newsletter">Briefing tech →</a>
+        <h2 data-i18n="section.tech">💻 Tecnologia</h2>
+        <a href="#newsletter" data-i18n="section.tech.link">Briefing tech →</a>
       </div>
       <div class="category-grid" id="grid-tecnologia"></div>
     </section>
 
     <section class="category-section container" id="mundo" data-category="mundo">
       <div class="section-head category-head mundo">
-        <h2>🌍 Mundo</h2>
-        <a href="#newsletter">Assinar newsletter →</a>
+        <h2 data-i18n="section.mundo">🌍 Mundo</h2>
+        <a href="#newsletter" data-i18n="section.mundo.link">Assinar newsletter →</a>
       </div>
       <div class="category-grid" id="grid-mundo"></div>
     </section>
@@ -136,10 +140,10 @@
       <div class="cta-inner">
         <img src="/assets/logo.png" alt="" width="72" height="72" class="cta-logo">
         <div>
-          <h2>Seu G1 inteligente, no e-mail e no Telegram</h2>
-          <p>O DevBrief News cura centenas de fontes, resume com IA e entrega o que importa — com foco em mercado, tech e empreendedorismo.</p>
+          <h2 data-i18n="cta.title">Seu G1 inteligente, no e-mail e no Telegram</h2>
+          <p data-i18n="cta.desc">O DevBrief News cura centenas de fontes, resume com IA e entrega o que importa — com foco em mercado, tech e empreendedorismo.</p>
         </div>
-        <a href="#newsletter" class="cta-button">Quero receber</a>
+        <a href="#newsletter" class="cta-button" data-i18n="cta.button">Quero receber</a>
       </div>
     </section>
   </main>
@@ -148,27 +152,27 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <img src="/assets/logo.png" alt="DevBrief News" width="48" height="48">
-        <p>DevBrief News — curadoria automatizada de notícias com IA. Briefing diário às 07:00 (Brasília).</p>
+        <p data-i18n="footer.desc">DevBrief News — curadoria automatizada de notícias com IA. Briefing diário às 07:00 (Brasília).</p>
       </div>
       <div>
-        <h3>Seções</h3>
+        <h3 data-i18n="footer.sections">Seções</h3>
         <ul>
-          <li><a href="#brasil">Brasil</a></li>
-          <li><a href="#mercado">Mercado</a></li>
-          <li><a href="#tecnologia">Tecnologia</a></li>
-          <li><a href="#mundo">Mundo</a></li>
+          <li><a href="#brasil" data-i18n="nav.brasil">Brasil</a></li>
+          <li><a href="#mercado" data-i18n="nav.mercado">Mercado</a></li>
+          <li><a href="#tecnologia" data-i18n="nav.tecnologia">Tecnologia</a></li>
+          <li><a href="#mundo" data-i18n="nav.mundo">Mundo</a></li>
         </ul>
       </div>
       <div>
-        <h3>Newsletter</h3>
+        <h3 data-i18n="footer.newsletter">Newsletter</h3>
         <ul>
-          <li><a href="#newsletter">Assinar grátis</a></li>
-          <li>Briefing diário 07h</li>
-          <li>Alertas urgentes</li>
+          <li><a href="#newsletter" data-i18n="footer.subscribe">Assinar grátis</a></li>
+          <li data-i18n="footer.briefing">Briefing diário 07h</li>
+          <li data-i18n="footer.alerts">Alertas urgentes</li>
         </ul>
       </div>
       <div>
-        <h3>Fontes</h3>
+        <h3 data-i18n="footer.sources">Fontes</h3>
         <ul class="sources-list">
           <li>G1 · CNN Brasil</li>
           <li>Valor · InfoMoney</li>
@@ -179,10 +183,11 @@
     </div>
     <div class="container footer-bottom">
       <span>© 2026 DevBrief News · RM Sys</span>
-      <span>Atualizado em tempo real via RSS</span>
+      <span data-i18n="footer.updated">Atualizado em tempo real via RSS</span>
     </div>
   </footer>
 
+  <script src="/js/i18n.js" defer></script>
   <script src="/js/app.js" defer></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 
 from lib.rss_client import find_article_by_url
 from lib.vercel_utils import send_json, setup_api_logging
+from services.translate import normalize_locale, translate_article
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,15 @@ class handler(BaseHTTPRequestHandler):
                 send_json(self, 400, {"ok": False, "error": "Parâmetro u (URL) é obrigatório."})
                 return
 
+            lang = normalize_locale((query.get("lang") or ["pt"])[0])
+
             article = find_article_by_url(article_url)
             if not article:
                 send_json(self, 404, {"ok": False, "error": "Notícia não encontrada."})
                 return
 
-            send_json(self, 200, {"ok": True, "article": article})
+            article = translate_article(article, lang)
+            send_json(self, 200, {"ok": True, "article": article, "locale": lang})
         except Exception as exc:
             logger.exception("Erro /api/article: %s", exc)
             send_json(self, 500, {"ok": False, "error": str(exc)})

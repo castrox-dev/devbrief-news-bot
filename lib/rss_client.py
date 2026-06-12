@@ -15,12 +15,12 @@ from xml.etree import ElementTree
 logger = logging.getLogger(__name__)
 
 FEEDS = [
-    {"name": "G1", "url": "https://g1.globo.com/rss/g1/", "category": "brasil", "label": "Brasil"},
-    {"name": "G1 Tech", "url": "https://g1.globo.com/rss/g1/tecnologia/", "category": "tecnologia", "label": "Tecnologia"},
-    {"name": "G1 Economia", "url": "https://g1.globo.com/rss/g1/economia/", "category": "mercado", "label": "Mercado"},
-    {"name": "InfoMoney", "url": "https://www.infomoney.com.br/feed/", "category": "mercado", "label": "Mercado"},
-    {"name": "CNN Brasil", "url": "https://www.cnnbrasil.com.br/feed/", "category": "brasil", "label": "Brasil"},
-    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tecnologia", "label": "Tecnologia"},
+    {"name": "G1", "url": "https://g1.globo.com/rss/g1/", "category": "brasil", "label": "Brasil", "lang": "pt"},
+    {"name": "G1 Tech", "url": "https://g1.globo.com/rss/g1/tecnologia/", "category": "tecnologia", "label": "Tecnologia", "lang": "pt"},
+    {"name": "G1 Economia", "url": "https://g1.globo.com/rss/g1/economia/", "category": "mercado", "label": "Mercado", "lang": "pt"},
+    {"name": "InfoMoney", "url": "https://www.infomoney.com.br/feed/", "category": "mercado", "label": "Mercado", "lang": "pt"},
+    {"name": "CNN Brasil", "url": "https://www.cnnbrasil.com.br/feed/", "category": "brasil", "label": "Brasil", "lang": "pt"},
+    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tecnologia", "label": "Tecnologia", "lang": "en"},
 ]
 
 FALLBACK_IMAGES: dict[str, list[str]] = {
@@ -156,7 +156,9 @@ def _parse_item_node(node) -> tuple[str, str, str, str, str]:
     return title, link, pub_raw, combined_html, direct_image
 
 
-def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[dict[str, Any]]:
+def _parse_feed(
+    xml_text: str, source: str, category: str, label: str, lang: str = "pt"
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     try:
         root = ElementTree.fromstring(xml_text)
@@ -181,6 +183,7 @@ def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[d
                 "source": source,
                 "category": category,
                 "category_label": label,
+                "lang": lang,
                 "summary": summary,
                 "body": body[:1500],
                 "published": _format_datetime(pub_raw),
@@ -193,7 +196,13 @@ def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[d
 
 def _fetch_feed(feed: dict[str, str]) -> list[dict[str, Any]]:
     xml_text = _fetch_url(feed["url"])
-    return _parse_feed(xml_text, feed["name"], feed["category"], feed["label"])
+    return _parse_feed(
+        xml_text,
+        feed["name"],
+        feed["category"],
+        feed["label"],
+        feed.get("lang", "pt"),
+    )
 
 
 def fetch_all_articles(*, max_feeds: int | None = None) -> list[dict[str, Any]]:
@@ -227,6 +236,7 @@ def _public_article(item: dict[str, Any]) -> dict[str, str]:
         "source": item.get("source", ""),
         "category": item.get("category", "brasil"),
         "category_label": item.get("category_label", ""),
+        "lang": item.get("lang", "pt"),
         "summary": item.get("summary", ""),
         "body": item.get("body", item.get("summary", "")),
         "published": item.get("published", ""),

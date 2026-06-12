@@ -8,12 +8,15 @@ import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from lib.rss_client import build_news_payload
+from services.market_data import fetch_market_quotes
+from services.translate import apply_locale_to_news_payload, normalize_locale
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,12 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         logging.basicConfig(level=logging.INFO)
         try:
-            _send_json(self, 200, build_news_payload())
+            query = parse_qs(urlparse(self.path).query)
+            lang = normalize_locale((query.get("lang") or ["pt"])[0])
+            payload = build_news_payload()
+            payload["market"] = fetch_market_quotes()
+            payload = apply_locale_to_news_payload(payload, lang)
+            _send_json(self, 200, payload)
         except Exception as exc:
             logger.exception("Erro /api/news: %s", exc)
             _send_json(self, 500, {"ok": False, "error": str(exc)})

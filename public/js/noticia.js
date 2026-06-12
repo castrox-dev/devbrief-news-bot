@@ -3,6 +3,7 @@
 
   const THEME_KEY = "devbrief-theme";
   const html = document.documentElement;
+  const i18n = window.DevBriefI18n;
 
   function initTheme() {
     const saved = localStorage.getItem(THEME_KEY);
@@ -14,6 +15,18 @@
     const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
     html.setAttribute("data-theme", next);
     localStorage.setItem(THEME_KEY, next);
+  }
+
+  function initLang() {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get("lang");
+    if (urlLang) {
+      i18n.setLang(urlLang);
+    } else {
+      i18n.setLang(i18n.getLang());
+    }
+    i18n.applyI18n();
+    i18n.syncLangToggle();
   }
 
   function escapeHtml(text) {
@@ -40,7 +53,7 @@
           onerror="this.src='/assets/logo.png'">
       </div>
       <div class="article-meta">
-        <span class="category-tag">${escapeHtml(article.category_label || article.category)}</span>
+        <span class="category-tag">${escapeHtml(i18n.categoryLabel(article.category) || article.category_label || article.category)}</span>
         <span>${escapeHtml(article.source)} · ${escapeHtml(article.published)}</span>
       </div>
       <h1>${escapeHtml(article.title)}</h1>
@@ -52,12 +65,11 @@
       </div>
       <div class="article-actions">
         <a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer" class="source-button">
-          Ver na fonte original (${escapeHtml(article.source)}) →
+          ${escapeHtml(i18n.t("article.source"))} (${escapeHtml(article.source)}) →
         </a>
       </div>
       <p class="article-disclaimer">
-        Resumo curado pelo DevBrief News a partir de fontes públicas.
-        Assine a newsletter para receber o briefing completo todo dia às 07h.
+        ${escapeHtml(i18n.t("article.disclaimer"))}
       </p>`;
   }
 
@@ -67,28 +79,32 @@
     root.classList.remove("loading");
     root.innerHTML = `
       <div class="article-error">
-        <h1>Notícia indisponível</h1>
+        <h1>${escapeHtml(i18n.t("article.error.title"))}</h1>
         <p>${escapeHtml(message)}</p>
-        <a href="/" class="read-more">← Voltar ao portal</a>
+        <a href="/" class="read-more">${escapeHtml(i18n.t("article.back"))}</a>
       </div>`;
   }
 
   async function loadArticle() {
     const articleUrl = getArticleUrl();
     if (!articleUrl) {
-      renderError("Link inválido. Volte ao portal e escolha uma notícia.");
+      renderError(i18n.t("article.error.invalid"));
       return;
     }
 
     try {
-      const res = await fetch("/api/article?u=" + encodeURIComponent(articleUrl), { cache: "no-store" });
+      const lang = i18n.getLang();
+      const res = await fetch(
+        "/api/article?u=" + encodeURIComponent(articleUrl) + "&lang=" + lang,
+        { cache: "no-store" }
+      );
       const data = await res.json();
       if (!res.ok || !data.ok || !data.article) {
         throw new Error(data.error || "Notícia não encontrada.");
       }
       renderArticle(data.article);
     } catch (err) {
-      renderError(err.message || "Erro ao carregar a notícia.");
+      renderError(err.message || i18n.t("article.error.title"));
     }
   }
 
@@ -102,7 +118,7 @@
     feedback.textContent = "";
     feedback.className = "form-feedback";
     button.disabled = true;
-    button.textContent = "Enviando...";
+    button.textContent = i18n.t("subscribe.sending");
 
     try {
       const res = await fetch("/api/subscribe", {
@@ -116,18 +132,31 @@
       feedback.classList.add("success");
       form.reset();
     } catch (err) {
-      feedback.textContent = err.message || "Não foi possível inscrever.";
+      feedback.textContent = err.message || i18n.t("subscribe.error");
       feedback.classList.add("error");
     } finally {
       button.disabled = false;
-      button.textContent = "Assinar grátis";
+      button.textContent = i18n.t("newsletter.submit");
     }
+  }
+
+  function handleLangChange(lang) {
+    i18n.setLang(lang);
+    i18n.applyI18n();
+    i18n.syncLangToggle();
+    loadArticle();
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     initTheme();
+    initLang();
     loadArticle();
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
     document.getElementById("subscribe-form")?.addEventListener("submit", handleSubscribe);
+    document.querySelectorAll("[data-lang-btn]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        handleLangChange(btn.getAttribute("data-lang-btn"));
+      });
+    });
   });
 })();

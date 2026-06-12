@@ -3,6 +3,7 @@
 
   const THEME_KEY = "devbrief-theme";
   const html = document.documentElement;
+  const i18n = window.DevBriefI18n;
 
   function initTheme() {
     const saved = localStorage.getItem(THEME_KEY);
@@ -16,6 +17,12 @@
     localStorage.setItem(THEME_KEY, next);
   }
 
+  function initLang() {
+    i18n.setLang(i18n.getLang());
+    i18n.applyI18n();
+    i18n.syncLangToggle();
+  }
+
   function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
@@ -23,20 +30,20 @@
   }
 
   function articlePageUrl(url) {
-    return "/noticia.html?u=" + encodeURIComponent(url || "");
+    return "/noticia.html?u=" + encodeURIComponent(url || "") + "&lang=" + i18n.getLang();
   }
 
-  function renderCard(article, large) {
+  function renderCard(article) {
     const img = escapeHtml(article.image || "");
     const title = escapeHtml(article.title || "");
     const summary = escapeHtml(article.summary || "");
     const source = escapeHtml(article.source || "");
     const published = escapeHtml(article.published || "");
-    const category = escapeHtml(article.category_label || article.category || "");
+    const category = escapeHtml(i18n.categoryLabel(article.category) || article.category_label || article.category || "");
     const internalUrl = escapeHtml(articlePageUrl(article.url));
 
     return `
-      <article class="news-card${large ? " large" : ""}">
+      <article class="news-card">
         <a href="${internalUrl}" class="news-card-image-link">
           <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/assets/logo.png'">
         </a>
@@ -48,7 +55,7 @@
             <span>${source}</span>
             <span>${published}</span>
           </footer>
-          <a href="${internalUrl}" class="read-more">Ver mais →</a>
+          <a href="${internalUrl}" class="read-more">${escapeHtml(i18n.t("read.more"))}</a>
         </div>
       </article>`;
   }
@@ -64,11 +71,11 @@
       <div class="hero-link">
         <a href="${internalUrl}" class="hero-image-wrap" style="background-image:url('${escapeHtml(featured.image)}')"></a>
         <div class="hero-content">
-          <span class="chip">${escapeHtml(featured.category_label)}</span>
+          <span class="chip">${escapeHtml(i18n.categoryLabel(featured.category) || featured.category_label)}</span>
           <h1><a href="${internalUrl}" class="hero-title-link">${escapeHtml(featured.title)}</a></h1>
           <p>${escapeHtml(featured.summary || "")}</p>
           <div class="hero-meta">${escapeHtml(featured.source)} · ${escapeHtml(featured.published)}</div>
-          <a href="${internalUrl}" class="read-more hero-read-more">Ver mais →</a>
+          <a href="${internalUrl}" class="read-more hero-read-more">${escapeHtml(i18n.t("read.more"))}</a>
         </div>
       </div>`;
   }
@@ -76,7 +83,14 @@
   function renderMarket(quotes) {
     const list = document.getElementById("market-list");
     const ticker = document.getElementById("ticker-track");
-    if (!quotes || !quotes.length) return;
+    if (!list || !ticker) return;
+
+    if (!quotes || !quotes.length) {
+      const msg = escapeHtml(i18n.t("market.unavailable"));
+      list.innerHTML = "<li><span>" + msg + "</span></li>";
+      ticker.innerHTML = '<span class="ticker-item">' + msg + "</span>";
+      return;
+    }
 
     list.innerHTML = quotes.map(function (q) {
       const cls = q.positive ? "positive" : "negative";
@@ -99,14 +113,14 @@
   function renderGrid(containerId, articles) {
     const el = document.getElementById(containerId);
     if (!el || !articles) return;
-    el.innerHTML = articles.map(function (a) { return renderCard(a, false); }).join("");
+    el.innerHTML = articles.map(function (a) { return renderCard(a); }).join("");
   }
 
   function renderLatest(articles) {
     const grid = document.getElementById("latest-grid");
     if (!grid) return;
     grid.innerHTML = (articles || []).slice(0, 8).map(function (a) {
-      return renderCard(a, false);
+      return renderCard(a);
     }).join("");
   }
 
@@ -120,16 +134,16 @@
 
   function showLoadingState() {
     const label = document.getElementById("updated-label");
-    if (label) label.textContent = "Buscando notícias agora...";
+    if (label) label.textContent = i18n.t("loading.label");
 
     const hero = document.querySelector(".hero-main");
     if (hero && hero.classList.contains("skeleton-block")) {
       hero.classList.remove("skeleton-block");
       hero.innerHTML = `
         <div class="hero-content empty-hero loading-hero">
-          <span class="chip">Atualizando</span>
-          <h1>Buscando as últimas notícias...</h1>
-          <p>Aguarde, estamos coletando RSS em tempo real.</p>
+          <span class="chip">${escapeHtml(i18n.t("loading.chip"))}</span>
+          <h1>${escapeHtml(i18n.t("loading.news"))}</h1>
+          <p>${escapeHtml(i18n.t("loading.wait"))}</p>
           <div class="loading-spinner" aria-hidden="true"></div>
         </div>`;
     }
@@ -137,16 +151,16 @@
 
   function showEmptyState(message) {
     const label = document.getElementById("updated-label");
-    if (label) label.textContent = message || "Nenhuma notícia disponível no momento.";
+    if (label) label.textContent = message || i18n.t("empty.none");
 
     const hero = document.querySelector(".hero-main");
     if (hero) {
       hero.classList.remove("skeleton-block");
       hero.innerHTML = `
         <div class="hero-content empty-hero">
-          <span class="chip">Aguarde</span>
-          <h1>Carregando as últimas notícias...</h1>
-          <p>O site atualiza a cada 5 minutos. Se persistir, recarregue a página.</p>
+          <span class="chip">${escapeHtml(i18n.t("loading.chip"))}</span>
+          <h1>${escapeHtml(i18n.t("loading.news"))}</h1>
+          <p>${escapeHtml(i18n.t("empty.unavailable"))}</p>
         </div>`;
     }
   }
@@ -154,7 +168,8 @@
   async function loadNews() {
     showLoadingState();
     try {
-      const res = await fetch("/api/news?t=" + Date.now(), { cache: "no-store" });
+      const lang = i18n.getLang();
+      const res = await fetch("/api/news?lang=" + lang + "&t=" + Date.now(), { cache: "no-store" });
       const raw = await res.text();
       let data;
       try {
@@ -165,7 +180,7 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao carregar");
 
       if (!data.featured && (!data.latest || !data.latest.length)) {
-        showEmptyState("Sincronizando notícias pela primeira vez...");
+        showEmptyState(i18n.t("empty.sync"));
         return;
       }
 
@@ -182,14 +197,14 @@
 
       const label = document.getElementById("updated-label");
       if (label) {
-        const source = data.source === "database" ? "" : " (tempo real)";
+        const source = data.source === "database" ? "" : i18n.t("updated.realtime");
         label.textContent = data.updated_at
-          ? "Atualizado: " + data.updated_at + source
-          : "Notícias atualizadas";
+          ? i18n.t("updated.prefix") + data.updated_at + source
+          : i18n.t("updated.fallback");
       }
     } catch (err) {
       console.error(err);
-      showEmptyState("Notícias temporariamente indisponíveis. Recarregue em alguns segundos.");
+      showEmptyState(i18n.t("empty.unavailable"));
     }
   }
 
@@ -203,7 +218,7 @@
     feedback.textContent = "";
     feedback.className = "form-feedback";
     button.disabled = true;
-    button.textContent = "Enviando...";
+    button.textContent = i18n.t("subscribe.sending");
 
     try {
       const res = await fetch("/api/subscribe", {
@@ -218,16 +233,24 @@
       feedback.classList.add("success");
       form.reset();
     } catch (err) {
-      feedback.textContent = err.message || "Não foi possível inscrever. Tente novamente.";
+      feedback.textContent = err.message || i18n.t("subscribe.error");
       feedback.classList.add("error");
     } finally {
       button.disabled = false;
-      button.textContent = "Assinar grátis";
+      button.textContent = i18n.t("newsletter.submit");
     }
+  }
+
+  function handleLangChange(lang) {
+    i18n.setLang(lang);
+    i18n.applyI18n();
+    i18n.syncLangToggle();
+    loadNews();
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     initTheme();
+    initLang();
     showLoadingState();
     loadNews();
 
@@ -236,6 +259,12 @@
 
     document.getElementById("menu-toggle")?.addEventListener("click", function () {
       document.querySelector(".main-nav")?.classList.toggle("open");
+    });
+
+    document.querySelectorAll("[data-lang-btn]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        handleLangChange(btn.getAttribute("data-lang-btn"));
+      });
     });
 
     setInterval(loadNews, 5 * 60 * 1000);

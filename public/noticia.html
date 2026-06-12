@@ -17,11 +17,15 @@
         <img src="/assets/logo.png" alt="DevBrief News" class="brand-logo" width="44" height="44">
         <div class="brand-text">
           <span class="brand-name">DevBrief <span class="brand-highlight">News</span></span>
-          <span class="brand-tagline">Inteligência diária para quem decide</span>
+          <span class="brand-tagline" data-i18n="brand.tagline">Inteligência diária para quem decide</span>
         </div>
       </a>
       <div class="header-actions">
-        <a href="/" class="back-home">← Voltar ao portal</a>
+        <a href="/" class="back-home" data-i18n="article.back">← Voltar ao portal</a>
+        <div class="lang-toggle" role="group" aria-label="Idioma">
+          <button type="button" class="lang-btn active" data-lang-btn="pt" aria-pressed="true">PT-BR</button>
+          <button type="button" class="lang-btn" data-lang-btn="en" aria-pressed="false">EN</button>
+        </div>
         <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema">
           <span class="theme-icon theme-icon-light">☀️</span>
           <span class="theme-icon theme-icon-dark">🌙</span>
@@ -32,22 +36,23 @@
 
   <main class="container article-wrap">
     <article id="article-root" class="article-reader loading">
-      <p class="article-loading">Carregando notícia...</p>
+      <p class="article-loading" data-i18n="article.loading">Carregando notícia...</p>
     </article>
 
     <aside class="article-sidebar">
       <div class="panel newsletter-panel">
-        <h2>📬 Receba no e-mail</h2>
-        <p>Briefing diário às 07h, alertas urgentes e resumo de mercado — grátis.</p>
+        <h2 data-i18n="newsletter.title">📬 Receba no e-mail</h2>
+        <p data-i18n="newsletter.desc">Briefing diário às 07h, alertas urgentes e resumo de mercado — grátis.</p>
         <form class="subscribe-form" id="subscribe-form">
-          <input type="email" name="email" placeholder="seu@email.com" required autocomplete="email">
-          <button type="submit">Assinar grátis</button>
+          <input type="email" name="email" data-i18n="newsletter.placeholder" data-i18n-attr="placeholder" placeholder="seu@email.com" required autocomplete="email">
+          <button type="submit" data-i18n="newsletter.submit">Assinar grátis</button>
         </form>
         <p class="form-feedback" id="form-feedback" role="status"></p>
       </div>
     </aside>
   </main>
 
+  <script src="/js/i18n.js" defer></script>
   <script src="/js/noticia.js" defer></script>
 </body>
 </html>
