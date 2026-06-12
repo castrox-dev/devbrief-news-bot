@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from http.server import BaseHTTPRequestHandler
 
+from lib.db_client import add_subscriber
 from lib.vercel_utils import send_json, setup_api_logging
-from services.news_store import add_subscriber
 from services.subscribe_service import SubscribeError, subscribe_email
+
+logger = logging.getLogger(__name__)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -34,6 +37,9 @@ class handler(BaseHTTPRequestHandler):
 
             try:
                 add_subscriber(email)
+            except ImportError as exc:
+                send_json(self, 500, {"ok": False, "error": f"Driver DB ausente: {exc}"})
+                return
             except Exception as db_exc:
                 send_json(
                     self,
@@ -53,6 +59,7 @@ class handler(BaseHTTPRequestHandler):
         except SubscribeError as exc:
             send_json(self, 400, {"ok": False, "error": str(exc)})
         except Exception as exc:
+            logger.exception("Erro /api/subscribe: %s", exc)
             send_json(self, 500, {"ok": False, "error": str(exc)})
 
     def do_OPTIONS(self) -> None:  # noqa: N802
