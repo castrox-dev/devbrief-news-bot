@@ -5,15 +5,9 @@ from __future__ import annotations
 import logging
 import os
 import ssl
-import sys
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
-from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from lib.rss_client import fetch_all_articles
 from lib.vercel_utils import is_authorized, send_json, setup_api_logging
