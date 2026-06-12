@@ -25,7 +25,6 @@ FEEDS = [
     {"name": "G1", "url": "https://g1.globo.com/rss/g1/", "category": "brasil", "label": "Brasil"},
     {"name": "G1 Tech", "url": "https://g1.globo.com/rss/g1/tecnologia/", "category": "tecnologia", "label": "Tecnologia"},
     {"name": "G1 Economia", "url": "https://g1.globo.com/rss/g1/economia/", "category": "mercado", "label": "Mercado"},
-    {"name": "CNN Brasil", "url": "https://www.cnnbrasil.com.br/feed/", "category": "brasil", "label": "Brasil"},
 ]
 
 FALLBACK_IMAGES = {
@@ -35,7 +34,7 @@ FALLBACK_IMAGES = {
     "mundo": "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80",
 }
 
-TIMEOUT = 6
+TIMEOUT = 4
 
 
 def _send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, Any]) -> None:
