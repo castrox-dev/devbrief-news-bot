@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -249,27 +248,13 @@ def fetch_news_articles(
     all_articles: list[NewsArticle] = []
     seen_titles: set[str] = set()
 
-    if lite:
-        with ThreadPoolExecutor(max_workers=min(6, len(feeds))) as executor:
-            futures = [
-                executor.submit(_fetch_single_feed, feed, cutoff, timeout, max_per_feed)
-                for feed in feeds
-            ]
-            for future in as_completed(futures):
-                for article in future.result():
-                    key = _normalize_title(article.title)
-                    if key in seen_titles:
-                        continue
-                    seen_titles.add(key)
-                    all_articles.append(article)
-    else:
-        for feed in feeds:
-            for article in _fetch_single_feed(feed, cutoff, timeout, max_per_feed):
-                key = _normalize_title(article.title)
-                if key in seen_titles:
-                    continue
-                seen_titles.add(key)
-                all_articles.append(article)
+    for feed in feeds:
+        for article in _fetch_single_feed(feed, cutoff, timeout, max_per_feed):
+            key = _normalize_title(article.title)
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+            all_articles.append(article)
 
     all_articles.sort(
         key=lambda a: a.published or datetime.min.replace(tzinfo=timezone.utc),

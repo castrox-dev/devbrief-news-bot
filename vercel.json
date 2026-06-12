@@ -2,11 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "builds": [
     { "src": "public/**", "use": "@vercel/static" },
-    { "src": "api/daily.py", "use": "@vercel/python" },
-    { "src": "api/sync.py", "use": "@vercel/python" },
+    { "src": "api/daily.py", "use": "@vercel/python", "config": { "maxLambdaSize": "50mb" } },
+    { "src": "api/sync.py", "use": "@vercel/python", "config": { "maxLambdaSize": "50mb" } },
     { "src": "api/health.py", "use": "@vercel/python" },
-    { "src": "api/news.py", "use": "@vercel/python" },
-    { "src": "api/subscribe.py", "use": "@vercel/python" }
+    { "src": "api/news.py", "use": "@vercel/python", "config": { "maxLambdaSize": "15mb" } },
+    { "src": "api/subscribe.py", "use": "@vercel/python", "config": { "maxLambdaSize": "50mb" } }
   ],
   "routes": [
     { "src": "/api/daily", "dest": "api/daily.py" },
