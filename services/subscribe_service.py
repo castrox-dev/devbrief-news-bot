@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 RESEND_CONTACTS_URL: Final[str] = "https://api.resend.com/audiences/{audience_id}/contacts"
 RESEND_EMAIL_URL: Final[str] = "https://api.resend.com/emails"
+FALLBACK_FROM: Final[str] = "DevBrief News <onboarding@resend.dev>"
 EMAIL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REQUEST_TIMEOUT: Final[float] = 20.0
 
@@ -36,19 +37,15 @@ def subscribe_email(
     from_address: str,
     audience_id: str = "",
     notify_addresses: list[str] | None = None,
-) -> None:
+) -> dict[str, bool | str | None]:
     """
     Inscreve e-mail na newsletter.
 
-    Args:
-        email: E-mail do assinante.
-        api_key: Chave Resend.
-        from_address: Remetente verificado.
-        audience_id: ID da audience Resend (opcional).
-        notify_addresses: Lista interna para aviso de nova inscrição.
+    Returns:
+        Dict com email_sent (bool) e warning opcional.
     """
     if not api_key:
-        raise SubscribeError("Newsletter indisponível no momento.")
+        return {"email_sent": False, "warning": "newsletter_email_disabled"}
 
     normalized = validate_email(email)
     headers = {
@@ -59,10 +56,15 @@ def subscribe_email(
     if audience_id:
         _add_to_audience(normalized, audience_id, headers)
 
-    _send_welcome_email(normalized, from_address, headers)
+    email_sent = _send_welcome_email(normalized, from_address, headers)
 
     if notify_addresses:
         _notify_team(normalized, from_address, notify_addresses, headers)
+
+    return {
+        "email_sent": email_sent,
+        "warning": None if email_sent else "welcome_email_failed",
+    }
 
 
 def _add_to_audience(email: str, audience_id: str, headers: dict[str, str]) -> None:
@@ -84,7 +86,7 @@ def _add_to_audience(email: str, audience_id: str, headers: dict[str, str]) -> N
         logger.warning("Falha ao adicionar à audience: %s", exc)
 
 
-def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) -> None:
+def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) -> bool:
     html = """
     <div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
       <h1 style="color:#E91E63;">DevBrief News</h1>
@@ -98,20 +100,34 @@ def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) 
       <p style="color:#666;font-size:14px;">Equipe DevBrief News</p>
     </div>
     """
-    response = requests.post(
-        RESEND_EMAIL_URL,
-        headers=headers,
-        json={
-            "from": from_address,
-            "to": [email],
-            "subject": "✅ Bem-vindo ao DevBrief News",
-            "html": html,
-        },
-        timeout=REQUEST_TIMEOUT,
-    )
-    if response.status_code not in (200, 201):
-        raise SubscribeError("Não foi possível confirmar sua inscrição. Tente novamente.")
-    time.sleep(0.2)
+    senders = []
+    if from_address:
+        senders.append(from_address)
+    if FALLBACK_FROM not in senders:
+        senders.append(FALLBACK_FROM)
+
+    for sender in senders:
+        response = requests.post(
+            RESEND_EMAIL_URL,
+            headers=headers,
+            json={
+                "from": sender,
+                "to": [email],
+                "subject": "Bem-vindo ao DevBrief News",
+                "html": html,
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
+        if response.status_code in (200, 201):
+            time.sleep(0.2)
+            return True
+        logger.warning(
+            "Resend welcome falhou (%s) remetente=%s: %s",
+            response.status_code,
+            sender,
+            response.text[:300],
+        )
+    return False
 
 
 def _notify_team(

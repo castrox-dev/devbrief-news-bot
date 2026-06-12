@@ -35,6 +35,10 @@ class handler(BaseHTTPRequestHandler):
             if not from_address:
                 from_address = "DevBrief News <onboarding@resend.dev>"
 
+            if not email:
+                send_json(self, 400, {"ok": False, "error": "Informe um e-mail válido."})
+                return
+
             try:
                 add_subscriber(email)
             except ImportError as exc:
@@ -48,14 +52,29 @@ class handler(BaseHTTPRequestHandler):
                 )
                 return
 
-            subscribe_email(
-                email,
-                api_key=api_key,
-                from_address=from_address,
-                audience_id=audience_id,
-                notify_addresses=notify_addresses,
-            )
-            send_json(self, 200, {"ok": True, "message": "Inscrição confirmada! Verifique seu e-mail."})
+            try:
+                result = subscribe_email(
+                    email,
+                    api_key=api_key,
+                    from_address=from_address,
+                    audience_id=audience_id,
+                    notify_addresses=notify_addresses,
+                )
+            except SubscribeError as exc:
+                send_json(self, 400, {"ok": False, "error": str(exc)})
+                return
+
+            if result.get("email_sent"):
+                message = "Inscrição confirmada! Verifique seu e-mail."
+            elif not api_key:
+                message = "Inscrição registrada! O briefing diário chegará em breve."
+            else:
+                message = (
+                    "Inscrição registrada com sucesso! "
+                    "Você entrará na lista do briefing diário às 07h."
+                )
+
+            send_json(self, 200, {"ok": True, "message": message})
         except SubscribeError as exc:
             send_json(self, 400, {"ok": False, "error": str(exc)})
         except Exception as exc:
