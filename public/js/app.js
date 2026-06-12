@@ -183,6 +183,6 @@
       document.querySelector(".main-nav")?.classList.toggle("open");
     });
 
-    document.querySelectorAll(".news-card-link, .hero-link").forEach(function () {});
+    setInterval(loadNews, 5 * 60 * 1000);
   });
 })();

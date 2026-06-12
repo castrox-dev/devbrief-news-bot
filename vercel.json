@@ -3,14 +3,14 @@
   "builds": [
     { "src": "public/**", "use": "@vercel/static" },
     { "src": "api/daily.py", "use": "@vercel/python" },
-    { "src": "api/breaking.py", "use": "@vercel/python" },
+    { "src": "api/sync.py", "use": "@vercel/python" },
     { "src": "api/health.py", "use": "@vercel/python" },
     { "src": "api/news.py", "use": "@vercel/python" },
     { "src": "api/subscribe.py", "use": "@vercel/python" }
   ],
   "routes": [
     { "src": "/api/daily", "dest": "api/daily.py" },
-    { "src": "/api/breaking", "dest": "api/breaking.py" },
+    { "src": "/api/sync", "dest": "api/sync.py" },
     { "src": "/api/health", "dest": "api/health.py" },
     { "src": "/api/news", "dest": "api/news.py" },
     { "src": "/api/subscribe", "dest": "api/subscribe.py" },

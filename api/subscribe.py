@@ -7,6 +7,7 @@ import os
 from http.server import BaseHTTPRequestHandler
 
 from lib.vercel_utils import send_json, setup_api_logging
+from services.news_store import add_subscriber
 from services.subscribe_service import SubscribeError, subscribe_email
 
 
@@ -30,6 +31,16 @@ class handler(BaseHTTPRequestHandler):
 
             if not from_address:
                 from_address = "DevBrief News <onboarding@resend.dev>"
+
+            try:
+                add_subscriber(email)
+            except Exception as db_exc:
+                send_json(
+                    self,
+                    500,
+                    {"ok": False, "error": f"Banco indisponível: {db_exc}"},
+                )
+                return
 
             subscribe_email(
                 email,

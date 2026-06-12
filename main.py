@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from scheduler.scheduler import create_scheduler, start_scheduler
 from services.email_renderer import render_email_html
-from services.jobs import get_base_dir, run_daily_news_job, run_breaking_news_job
+from services.jobs import get_base_dir, run_daily_news_job, run_sync_news_job
 from services.summary_formatter import normalize_summary
 
 LOG_DIR = get_base_dir() / "logs"
@@ -83,6 +83,8 @@ def load_config() -> dict[str, str]:
         "breaking_max_age_hours": os.getenv("BREAKING_MAX_AGE_HOURS", "3").strip(),
         "breaking_min_score": os.getenv("BREAKING_MIN_SCORE", "5").strip(),
         "breaking_max_candidates": os.getenv("BREAKING_MAX_CANDIDATES", "5").strip(),
+        "sync_max_age_hours": os.getenv("SYNC_MAX_AGE_HOURS", "24").strip(),
+        "database_url": os.getenv("DATABASE_URL", "").strip(),
         "cron_secret": os.getenv("CRON_SECRET", "").strip(),
     }
 
@@ -115,9 +117,14 @@ def parse_args() -> argparse.Namespace:
         help="Executa o briefing diário imediatamente e encerra.",
     )
     parser.add_argument(
+        "--sync-now",
+        action="store_true",
+        help="Sincroniza notícias RSS → PostgreSQL imediatamente (atualiza o site).",
+    )
+    parser.add_argument(
         "--breaking-now",
         action="store_true",
-        help="Executa verificação de breaking news imediatamente e encerra.",
+        help="[Legado] Executa verificação de breaking news imediatamente.",
     )
     parser.add_argument(
         "--preview-email",
@@ -171,7 +178,14 @@ def main() -> None:
         run_daily_news_job(config)
         return
 
+    if args.sync_now:
+        logger.info("Modo --sync-now: sincronizando notícias para o banco.")
+        run_sync_news_job(config)
+        return
+
     if args.breaking_now:
+        from services.jobs import run_breaking_news_job
+
         logger.info("Modo --breaking-now: verificando breaking news.")
         run_breaking_news_job(config)
         return
@@ -182,11 +196,11 @@ def main() -> None:
         except Exception:
             logger.error("Briefing diário falhou. Próxima tentativa no horário configurado.")
 
-    def scheduled_breaking_job() -> None:
+    def scheduled_sync_job() -> None:
         try:
-            run_breaking_news_job(config)
+            run_sync_news_job(config)
         except Exception:
-            logger.error("Verificação de breaking news falhou. Próxima tentativa em 30 min.")
+            logger.error("Sync de notícias falhou. Próxima tentativa em 5 min.")
 
     daily_scheduler = create_scheduler(
         job=scheduled_daily_job,
@@ -194,17 +208,17 @@ def main() -> None:
         schedule_time=config["schedule_time"],
     )
     daily_scheduler.add_job(
-        scheduled_breaking_job,
+        scheduled_sync_job,
         trigger=CronTrigger(
-            minute="*/30",
+            minute="*/5",
             timezone=config["timezone"],
         ),
-        id="breaking_news_job",
-        name="Breaking News Monitor",
+        id="news_sync_job",
+        name="News Sync (site)",
         replace_existing=True,
-        misfire_grace_time=1800,
+        misfire_grace_time=300,
     )
-    logger.info("Monitor de breaking news: a cada 30 minutos.")
+    logger.info("Sync do site: a cada 5 minutos. Telegram/e-mail: só às %s.", config["schedule_time"])
     start_scheduler(daily_scheduler)
 
 

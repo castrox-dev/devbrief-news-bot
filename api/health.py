@@ -18,6 +18,6 @@ class handler(BaseHTTPRequestHandler):
             {
                 "ok": True,
                 "service": "devbrief-news-bot",
-                "jobs": ["daily", "breaking"],
+                "jobs": ["daily", "sync", "news"],
             },
         )

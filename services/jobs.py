@@ -294,6 +294,38 @@ def run_breaking_news_job(config: dict[str, str]) -> dict[str, object]:
         logger.info("=" * 60)
 
 
+def run_sync_news_job(config: dict[str, str] | None = None) -> dict[str, object]:
+    """
+    Sincroniza feeds RSS no PostgreSQL (atualiza o site).
+
+    Telegram e e-mail não são disparados aqui — apenas persistência no banco.
+    """
+    from services.news_store import sync_articles_from_rss
+
+    start_time = time.perf_counter()
+    logger.info("=" * 60)
+    logger.info("Início do sync de notícias (site)")
+    logger.info("Data/hora: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    try:
+        max_age_hours = int((config or {}).get("sync_max_age_hours", "24"))
+        stats = sync_articles_from_rss(max_age_hours=max_age_hours)
+        elapsed = time.perf_counter() - start_time
+        logger.info("Sync concluído em %.2f segundos.", elapsed)
+        return {
+            "ok": True,
+            "job": "sync",
+            "elapsed_seconds": round(elapsed, 2),
+            **stats,
+        }
+    except Exception as exc:
+        elapsed = time.perf_counter() - start_time
+        logger.exception("Falha no sync após %.2f segundos: %s", elapsed, exc)
+        raise
+    finally:
+        logger.info("=" * 60)
+
+
 def load_config_from_env() -> dict[str, str]:
     """Carrega configuração a partir de variáveis de ambiente."""
     return {
@@ -316,5 +348,7 @@ def load_config_from_env() -> dict[str, str]:
         "breaking_max_age_hours": os.getenv("BREAKING_MAX_AGE_HOURS", "3").strip(),
         "breaking_min_score": os.getenv("BREAKING_MIN_SCORE", "5").strip(),
         "breaking_max_candidates": os.getenv("BREAKING_MAX_CANDIDATES", "5").strip(),
+        "sync_max_age_hours": os.getenv("SYNC_MAX_AGE_HOURS", "24").strip(),
+        "database_url": os.getenv("DATABASE_URL", "").strip(),
         "cron_secret": os.getenv("CRON_SECRET", "").strip(),
     }
