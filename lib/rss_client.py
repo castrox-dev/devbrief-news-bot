@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
@@ -113,30 +114,52 @@ def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[d
     return items
 
 
-def fetch_all_articles() -> list[dict[str, Any]]:
-    """Coleta artigos de todos os feeds configurados."""
+def _fetch_feed(feed: dict[str, str]) -> list[dict[str, Any]]:
+    xml_text = _fetch_url(feed["url"])
+    return _parse_feed(xml_text, feed["name"], feed["category"], feed["label"])
+
+
+def fetch_all_articles(*, max_feeds: int | None = None) -> list[dict[str, Any]]:
+    """Coleta artigos dos feeds (paralelo para caber no timeout da Vercel)."""
+    feeds = FEEDS[:max_feeds] if max_feeds else FEEDS
     articles: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for feed in FEEDS:
-        try:
-            xml_text = _fetch_url(feed["url"])
-            for item in _parse_feed(xml_text, feed["name"], feed["category"], feed["label"]):
-                key = re.sub(r"[^a-z0-9]+", "", item["title"].lower())[:60]
-                if key in seen:
-                    continue
-                seen.add(key)
-                articles.append(item)
-        except (URLError, TimeoutError, OSError, ValueError) as exc:
-            logger.warning("Feed %s falhou: %s", feed["name"], exc)
+    with ThreadPoolExecutor(max_workers=min(4, len(feeds))) as pool:
+        futures = {pool.submit(_fetch_feed, feed): feed for feed in feeds}
+        for future in as_completed(futures):
+            feed = futures[future]
+            try:
+                for item in future.result():
+                    key = re.sub(r"[^a-z0-9]+", "", item["title"].lower())[:60]
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    articles.append(item)
+            except (URLError, TimeoutError, OSError, ValueError) as exc:
+                logger.warning("Feed %s falhou: %s", feed["name"], exc)
 
     return articles
 
 
+def _public_article(item: dict[str, Any]) -> dict[str, str]:
+    """Remove campos internos (ex.: datetime) do payload JSON."""
+    return {
+        "title": item["title"],
+        "url": item["url"],
+        "source": item.get("source", ""),
+        "category": item.get("category", "brasil"),
+        "category_label": item.get("category_label", ""),
+        "summary": item.get("summary", ""),
+        "published": item.get("published", ""),
+        "image": item.get("image", ""),
+    }
+
+
 def build_news_payload() -> dict[str, Any]:
     """Monta JSON da landing page."""
-    articles = fetch_all_articles()
-    categories: dict[str, list[dict[str, Any]]] = {
+    articles = [_public_article(item) for item in fetch_all_articles()]
+    categories: dict[str, list[dict[str, str]]] = {
         "brasil": [],
         "mundo": [],
         "tecnologia": [],

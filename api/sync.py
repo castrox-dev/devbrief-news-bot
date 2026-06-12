@@ -18,25 +18,29 @@ from lib.vercel_utils import is_authorized, send_json, setup_api_logging
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS articles (
-    id BIGSERIAL PRIMARY KEY,
-    url TEXT UNIQUE NOT NULL,
-    title TEXT NOT NULL,
-    summary TEXT DEFAULT '',
-    source TEXT DEFAULT '',
-    category TEXT DEFAULT 'brasil',
-    image TEXT DEFAULT '',
-    published_at TIMESTAMPTZ,
-    synced_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_articles_published ON articles (published_at DESC NULLS LAST);
-CREATE TABLE IF NOT EXISTS subscribers (
-    id BIGSERIAL PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-"""
+SCHEMA_STATEMENTS = [
+    """
+    CREATE TABLE IF NOT EXISTS articles (
+        id BIGSERIAL PRIMARY KEY,
+        url TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT DEFAULT '',
+        source TEXT DEFAULT '',
+        category TEXT DEFAULT 'brasil',
+        image TEXT DEFAULT '',
+        published_at TIMESTAMPTZ,
+        synced_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_articles_published ON articles (published_at DESC NULLS LAST)",
+    """
+    CREATE TABLE IF NOT EXISTS subscribers (
+        id BIGSERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+]
 
 
 def _sync_to_database(articles: list[dict]) -> int:
@@ -51,7 +55,8 @@ def _sync_to_database(articles: list[dict]) -> int:
     upserted = 0
     try:
         with conn.cursor() as cur:
-            cur.execute(SCHEMA_SQL)
+            for statement in SCHEMA_STATEMENTS:
+                cur.execute(statement)
             for article in articles:
                 cur.execute(
                     """
@@ -97,7 +102,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            articles = fetch_all_articles()
+            articles = fetch_all_articles(max_feeds=4)
             upserted = _sync_to_database(articles)
             send_json(
                 self,
