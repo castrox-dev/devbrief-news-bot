@@ -33,7 +33,7 @@ class handler(BaseHTTPRequestHandler):
             notify_addresses = [item.strip() for item in notify_raw.split(",") if item.strip()]
 
             if not from_address:
-                from_address = "DevBrief News <onboarding@resend.dev>"
+                from_address = "DevBrief News <noreply@rmsys.com.br>"
 
             if not email:
                 send_json(self, 400, {"ok": False, "error": "Informe um e-mail válido."})

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 RESEND_CONTACTS_URL: Final[str] = "https://api.resend.com/audiences/{audience_id}/contacts"
 RESEND_EMAIL_URL: Final[str] = "https://api.resend.com/emails"
-FALLBACK_FROM: Final[str] = "DevBrief News <onboarding@resend.dev>"
+DEFAULT_FROM: Final[str] = "DevBrief News <noreply@rmsys.com.br>"
 EMAIL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REQUEST_TIMEOUT: Final[float] = 20.0
 
@@ -100,33 +100,27 @@ def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) 
       <p style="color:#666;font-size:14px;">Equipe DevBrief News</p>
     </div>
     """
-    senders = []
-    if from_address:
-        senders.append(from_address)
-    if FALLBACK_FROM not in senders:
-        senders.append(FALLBACK_FROM)
-
-    for sender in senders:
-        response = requests.post(
-            RESEND_EMAIL_URL,
-            headers=headers,
-            json={
-                "from": sender,
-                "to": [email],
-                "subject": "Bem-vindo ao DevBrief News",
-                "html": html,
-            },
-            timeout=REQUEST_TIMEOUT,
-        )
-        if response.status_code in (200, 201):
-            time.sleep(0.2)
-            return True
-        logger.warning(
-            "Resend welcome falhou (%s) remetente=%s: %s",
-            response.status_code,
-            sender,
-            response.text[:300],
-        )
+    sender = from_address.strip() or DEFAULT_FROM
+    response = requests.post(
+        RESEND_EMAIL_URL,
+        headers=headers,
+        json={
+            "from": sender,
+            "to": [email],
+            "subject": "Bem-vindo ao DevBrief News",
+            "html": html,
+        },
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code in (200, 201):
+        time.sleep(0.2)
+        return True
+    logger.warning(
+        "Resend welcome falhou (%s) remetente=%s: %s",
+        response.status_code,
+        sender,
+        response.text[:300],
+    )
     return False
 
 
