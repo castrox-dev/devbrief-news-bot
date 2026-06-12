@@ -9,6 +9,8 @@ from typing import Final
 
 import requests
 
+from lib.email_templates import render_team_notification_email, render_welcome_email
+
 logger = logging.getLogger(__name__)
 
 RESEND_CONTACTS_URL: Final[str] = "https://api.resend.com/audiences/{audience_id}/contacts"
@@ -38,12 +40,7 @@ def subscribe_email(
     audience_id: str = "",
     notify_addresses: list[str] | None = None,
 ) -> dict[str, bool | str | None]:
-    """
-    Inscreve e-mail na newsletter.
-
-    Returns:
-        Dict com email_sent (bool) e warning opcional.
-    """
+    """Inscreve e-mail na newsletter."""
     if not api_key:
         return {"email_sent": False, "warning": "newsletter_email_disabled"}
 
@@ -86,42 +83,29 @@ def _add_to_audience(email: str, audience_id: str, headers: dict[str, str]) -> N
         logger.warning("Falha ao adicionar à audience: %s", exc)
 
 
-def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) -> bool:
-    html = """
-    <div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
-      <h1 style="color:#E91E63;">DevBrief News</h1>
-      <p>Obrigado por assinar a newsletter!</p>
-      <p>Você passará a receber:</p>
-      <ul>
-        <li>Briefing diário às 07:00 (Brasília)</li>
-        <li>Alertas urgentes de mercado e tecnologia</li>
-        <li>Resumo para empreendedores e investidores</li>
-      </ul>
-      <p style="color:#666;font-size:14px;">Equipe DevBrief News</p>
-    </div>
-    """
+def _send_resend(from_address: str, headers: dict[str, str], *, to: list[str], subject: str, html: str) -> bool:
     sender = from_address.strip() or DEFAULT_FROM
     response = requests.post(
         RESEND_EMAIL_URL,
         headers=headers,
-        json={
-            "from": sender,
-            "to": [email],
-            "subject": "Bem-vindo ao DevBrief News",
-            "html": html,
-        },
+        json={"from": sender, "to": to, "subject": subject, "html": html},
         timeout=REQUEST_TIMEOUT,
     )
     if response.status_code in (200, 201):
         time.sleep(0.2)
         return True
     logger.warning(
-        "Resend welcome falhou (%s) remetente=%s: %s",
+        "Resend falhou (%s) remetente=%s: %s",
         response.status_code,
         sender,
         response.text[:300],
     )
     return False
+
+
+def _send_welcome_email(email: str, from_address: str, headers: dict[str, str]) -> bool:
+    subject, html_body = render_welcome_email(email)
+    return _send_resend(from_address, headers, to=[email], subject=subject, html=html_body)
 
 
 def _notify_team(
@@ -131,16 +115,7 @@ def _notify_team(
     headers: dict[str, str],
 ) -> None:
     try:
-        requests.post(
-            RESEND_EMAIL_URL,
-            headers=headers,
-            json={
-                "from": from_address,
-                "to": notify_addresses,
-                "subject": f"📬 Nova inscrição DevBrief: {email}",
-                "html": f"<p>Novo assinante: <strong>{email}</strong></p>",
-            },
-            timeout=REQUEST_TIMEOUT,
-        )
+        subject, html_body = render_team_notification_email(email)
+        _send_resend(from_address, headers, to=notify_addresses, subject=subject, html=html_body)
     except Exception as exc:
         logger.warning("Falha ao notificar equipe: %s", exc)

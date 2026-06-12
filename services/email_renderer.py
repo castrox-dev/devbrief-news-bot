@@ -13,8 +13,8 @@ from typing import Final
 
 BRAND_NAME: Final[str] = "DevBrief News"
 LOGO_CID: Final[str] = "devbrief-logo"
-ACCENT_GOLD: Final[str] = "#FFC107"
-ACCENT_RED: Final[str] = "#E91E63"
+ACCENT_GOLD: Final[str] = "#FFB020"
+ACCENT_RED: Final[str] = "#E53935"
 ACCENT_BLUE: Final[str] = "#4A90E2"
 
 

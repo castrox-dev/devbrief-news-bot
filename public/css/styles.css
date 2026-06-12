@@ -1,8 +1,11 @@
 :root {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-serif: "Merriweather", Georgia, serif;
-  --accent: #e91e63;
-  --accent-soft: rgba(233, 30, 99, 0.12);
+  --accent: #ffb020;
+  --accent-strong: #e69500;
+  --accent-soft: rgba(255, 176, 32, 0.14);
+  --brand-blue: #4a90e2;
+  --brand-red: #e53935;
   --gold: #ffc107;
   --blue: #4a90e2;
   --green: #10b981;
@@ -15,16 +18,16 @@
 }
 
 [data-theme="light"] {
-  --bg: #f4f6f9;
+  --bg: #f7f8fb;
   --bg-elevated: #ffffff;
   --bg-muted: #eef1f6;
-  --text: #1a1d26;
+  --text: #0f1117;
   --text-muted: #5c6478;
   --border: #dde3ec;
-  --header-bg: rgba(255, 255, 255, 0.92);
-  --hero-overlay: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.75));
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --hero-overlay: linear-gradient(180deg, transparent 25%, rgba(10, 10, 10, 0.82));
   --skeleton: #e5e9f0;
-  --ticker-bg: #1a1d26;
+  --ticker-bg: #0a0a0a;
   --ticker-text: #fff;
 }
 
@@ -99,6 +102,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 -2px 0 linear-gradient(90deg, var(--accent), var(--brand-blue), transparent);
 }
 .header-inner {
   display: flex;
@@ -115,6 +119,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 1.15rem;
   letter-spacing: -0.02em;
 }
+.brand-highlight { color: var(--accent); }
 .brand-tagline {
   display: block;
   font-size: 0.72rem;
@@ -163,7 +168,7 @@ a { color: inherit; text-decoration: none; }
   padding: 0.6rem 1rem;
 }
 .breaking-badge {
-  background: var(--accent);
+  background: var(--brand-red);
   color: #fff;
   font-size: 0.68rem;
   font-weight: 800;
@@ -512,7 +517,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  background: linear-gradient(135deg, var(--accent), #9333ea);
+  background: linear-gradient(135deg, var(--accent), var(--brand-blue));
   color: #fff;
   padding: 2rem;
   border-radius: var(--radius);
