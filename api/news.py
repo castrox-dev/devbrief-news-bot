@@ -1,23 +1,17 @@
-"""Endpoint público — notícias RSS (standalone, otimizado para Vercel)."""
+"""Endpoint público — notícias RSS (stdlib only, compatível com Vercel)."""
 
 from __future__ import annotations
 
 import json
 import logging
 import re
-import sys
-from datetime import datetime, timezone
+from datetime import timezone
 from email.utils import parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler
-from pathlib import Path
 from typing import Any
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 from xml.etree import ElementTree
-
-import requests
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +25,10 @@ FALLBACK_IMAGES = {
     "brasil": "https://images.unsplash.com/photo-1483728642387-6c3bddae7a35?w=800&q=80",
     "tecnologia": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
     "mercado": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
-    "mundo": "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80",
 }
 
 TIMEOUT = 4
+USER_AGENT = "DevBriefNewsBot/1.0"
 
 
 def _send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, Any]) -> None:
@@ -46,30 +40,38 @@ def _send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, 
     handler.wfile.write(body)
 
 
+def _fetch_url(url: str) -> str:
+    request = Request(url, headers={"User-Agent": USER_AGENT})
+    with urlopen(request, timeout=TIMEOUT) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
 def _strip_html(text: str) -> str:
     clean = re.sub(r"<[^>]+>", " ", text or "")
     return re.sub(r"\s+", " ", clean).strip()
 
 
-def _parse_date(raw: str) -> datetime | None:
+def _parse_date(raw: str) -> str:
     if not raw:
-        return None
+        return "Agora"
     try:
         parsed = parsedate_to_datetime(raw)
         if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M")
     except Exception:
-        return None
+        return "Agora"
 
 
-def _extract_image(html: str) -> str:
+def _extract_image(html: str, category: str) -> str:
     match = re.search(r'src=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']', html, re.I)
-    return match.group(1) if match else ""
+    if match:
+        return match.group(1)
+    return FALLBACK_IMAGES.get(category, FALLBACK_IMAGES["brasil"])
 
 
-def _parse_feed(xml_text: str, source: str, category: str) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
+def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
     try:
         root = ElementTree.fromstring(xml_text)
     except ElementTree.ParseError:
@@ -95,11 +97,6 @@ def _parse_feed(xml_text: str, source: str, category: str) -> list[dict[str, Any
         if not title or not link:
             continue
 
-        published = _parse_date(pub_raw)
-        pub_label = published.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M") if published else "Agora"
-        image = _extract_image(summary) or FALLBACK_IMAGES.get(category, FALLBACK_IMAGES["brasil"])
-        label = next((f["label"] for f in FEEDS if f["category"] == category), category)
-
         items.append(
             {
                 "title": title,
@@ -108,68 +105,30 @@ def _parse_feed(xml_text: str, source: str, category: str) -> list[dict[str, Any
                 "category": category,
                 "category_label": label,
                 "summary": summary,
-                "published": pub_label,
-                "image": image,
+                "published": _parse_date(pub_raw),
+                "image": _extract_image(summary, category),
             }
         )
     return items
 
 
-def _fetch_market() -> list[dict[str, Any]]:
-    try:
-        response = requests.get(
-            "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL",
-            timeout=5,
-            headers={"User-Agent": "DevBriefNewsBot/1.0"},
-        )
-        response.raise_for_status()
-        data = response.json()
-    except Exception:
-        return []
-
-    labels = {"USDBRL": "USD/BRL", "EURBRL": "EUR/BRL", "BTCBRL": "BTC/BRL"}
-    quotes: list[dict[str, Any]] = []
-    for key, label in labels.items():
-        item = data.get(key)
-        if not item:
-            continue
-        try:
-            pct = float(str(item.get("pctChange", "0")).replace(",", "."))
-        except ValueError:
-            pct = 0.0
-        quotes.append(
-            {
-                "label": label,
-                "value": str(item.get("bid", "—")),
-                "change": f"{pct:+.2f}%",
-                "positive": pct >= 0,
-            }
-        )
-    return quotes
-
-
 def _build_payload() -> dict[str, Any]:
-    articles: list[dict[str, Any]] = []
+    articles: list[dict[str, str]] = []
     seen: set[str] = set()
 
     for feed in FEEDS:
         try:
-            response = requests.get(
-                feed["url"],
-                timeout=TIMEOUT,
-                headers={"User-Agent": "DevBriefNewsBot/1.0"},
-            )
-            response.raise_for_status()
-            for item in _parse_feed(response.text, feed["name"], feed["category"]):
+            xml_text = _fetch_url(feed["url"])
+            for item in _parse_feed(xml_text, feed["name"], feed["category"], feed["label"]):
                 key = re.sub(r"[^a-z0-9]+", "", item["title"].lower())[:60]
                 if key in seen:
                     continue
                 seen.add(key)
                 articles.append(item)
-        except Exception as exc:
+        except (URLError, TimeoutError, OSError, ValueError) as exc:
             logger.warning("Feed %s falhou: %s", feed["name"], exc)
 
-    categories: dict[str, list[dict[str, Any]]] = {
+    categories: dict[str, list[dict[str, str]]] = {
         "brasil": [],
         "mundo": [],
         "tecnologia": [],
@@ -182,11 +141,11 @@ def _build_payload() -> dict[str, Any]:
 
     return {
         "ok": True,
-        "source": "rss_standalone",
+        "source": "rss_stdlib",
         "featured": articles[0] if articles else None,
         "latest": articles[:12],
         "categories": categories,
-        "market": _fetch_market(),
+        "market": [],
         "updated_at": articles[0]["published"] if articles else "",
         "total": len(articles),
     }
@@ -199,9 +158,6 @@ class handler(BaseHTTPRequestHandler):
         logging.basicConfig(level=logging.INFO)
         try:
             payload = _build_payload()
-            if not payload.get("total"):
-                _send_json(self, 200, {**payload, "ok": True, "error": "Nenhum feed disponível agora."})
-                return
             _send_json(self, 200, payload)
         except Exception as exc:
             logger.exception("Erro /api/news: %s", exc)
