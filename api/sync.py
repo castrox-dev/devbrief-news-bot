@@ -116,6 +116,21 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             articles = fetch_all_articles(max_feeds=4)
+            db_url = os.getenv("DATABASE_URL", "").strip()
+            if not db_url:
+                send_json(
+                    self,
+                    200,
+                    {
+                        "ok": True,
+                        "job": "sync",
+                        "fetched": len(articles),
+                        "upserted": 0,
+                        "warning": "DATABASE_URL ausente na Vercel",
+                    },
+                )
+                return
+
             upserted = _sync_to_database(articles)
             send_json(
                 self,
@@ -127,6 +142,9 @@ class handler(BaseHTTPRequestHandler):
                     "upserted": upserted,
                 },
             )
+        except ImportError as exc:
+            logger.exception("Driver DB ausente: %s", exc)
+            send_json(self, 500, {"ok": False, "error": f"driver_db: {exc}"})
         except Exception as exc:
             logger.exception("Erro /api/sync: %s", exc)
             send_json(self, 500, {"ok": False, "error": str(exc)})
