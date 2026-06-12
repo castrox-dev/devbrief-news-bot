@@ -88,9 +88,12 @@
     if (!quotes || !quotes.length) {
       const msg = escapeHtml(i18n.t("market.unavailable"));
       list.innerHTML = "<li><span>" + msg + "</span></li>";
-      ticker.innerHTML = '<span class="ticker-item">' + msg + "</span>";
+      ticker.innerHTML = '<span class="ticker-item ticker-muted">—</span>';
+      document.getElementById("market-ticker")?.classList.add("ticker-empty");
       return;
     }
+
+    document.getElementById("market-ticker")?.classList.remove("ticker-empty");
 
     list.innerHTML = quotes.map(function (q) {
       const cls = q.positive ? "positive" : "negative";

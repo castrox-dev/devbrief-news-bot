@@ -2,23 +2,46 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import Final
-
-import requests
+from typing import Any, Final
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
 AWESOME_API_URL: Final[str] = (
     "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL"
 )
-REQUEST_TIMEOUT: Final[int] = 10
+REQUEST_TIMEOUT: Final[int] = 8
+USER_AGENT: Final[str] = "DevBriefNewsBot/1.0"
+MAX_RETRIES: Final[int] = 2
 
 LABELS: Final[dict[str, str]] = {
     "USDBRL": "Dólar (USD/BRL)",
     "EURBRL": "Euro (EUR/BRL)",
     "BTCBRL": "Bitcoin (BTC/BRL)",
 }
+
+
+def _fetch_json(url: str) -> dict[str, Any]:
+    """Busca JSON via stdlib (compatível com Vercel serverless)."""
+    request = Request(url, headers={"User-Agent": USER_AGENT})
+    with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _fetch_market_data() -> dict[str, Any]:
+    last_error: Exception | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return _fetch_json(AWESOME_API_URL)
+        except (URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
+            last_error = exc
+            logger.warning("Tentativa %s/%s — cotações: %s", attempt, MAX_RETRIES, exc)
+    if last_error:
+        raise last_error
+    return {}
 
 
 def fetch_market_snapshot() -> str:
@@ -29,13 +52,7 @@ def fetch_market_snapshot() -> str:
         Texto formatado para injeção no prompt da IA, ou string vazia em caso de falha.
     """
     try:
-        response = requests.get(
-            AWESOME_API_URL,
-            timeout=REQUEST_TIMEOUT,
-            headers={"User-Agent": "DevBriefNewsBot/1.0"},
-        )
-        response.raise_for_status()
-        data = response.json()
+        data = _fetch_market_data()
     except Exception as exc:
         logger.warning("Falha ao buscar cotações de mercado: %s", exc)
         return ""
@@ -69,13 +86,7 @@ def fetch_market_quotes() -> list[dict[str, str | bool]]:
         Lista de cotações com label, valor e variação.
     """
     try:
-        response = requests.get(
-            AWESOME_API_URL,
-            timeout=REQUEST_TIMEOUT,
-            headers={"User-Agent": "DevBriefNewsBot/1.0"},
-        )
-        response.raise_for_status()
-        data = response.json()
+        data = _fetch_market_data()
     except Exception as exc:
         logger.warning("Falha ao buscar cotações de mercado: %s", exc)
         return []

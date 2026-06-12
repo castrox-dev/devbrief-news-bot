@@ -126,17 +126,28 @@ def apply_locale_to_news_payload(payload: dict[str, Any], lang: str) -> dict[str
     target = normalize_locale(lang)
     result = dict(payload)
     result["locale"] = target
+    cache: dict[str, dict[str, Any]] = {}
+
+    def localized(article: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not article:
+            return article
+        key = article.get("url") or article.get("title", "")
+        if key in cache:
+            return cache[key]
+        translated = translate_article(article, target)
+        cache[key] = translated
+        return translated
 
     if result.get("featured"):
-        result["featured"] = translate_article(result["featured"], target)
+        result["featured"] = localized(result["featured"])
 
     if result.get("latest"):
-        result["latest"] = _translate_many(result["latest"], target)
+        result["latest"] = [localized(item) for item in result["latest"]]
 
     categories = result.get("categories") or {}
     translated_categories: dict[str, list[dict[str, Any]]] = {}
     for key, items in categories.items():
-        translated_categories[key] = _translate_many(items, target)
+        translated_categories[key] = [localized(item) for item in items]
     result["categories"] = translated_categories
 
     return result

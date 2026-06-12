@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -38,8 +39,13 @@ class handler(BaseHTTPRequestHandler):
         try:
             query = parse_qs(urlparse(self.path).query)
             lang = normalize_locale((query.get("lang") or ["pt"])[0])
-            payload = build_news_payload()
-            payload["market"] = fetch_market_quotes()
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                news_future = pool.submit(build_news_payload)
+                market_future = pool.submit(fetch_market_quotes)
+                payload = news_future.result()
+                payload["market"] = market_future.result()
+
             payload = apply_locale_to_news_payload(payload, lang)
             _send_json(self, 200, payload)
         except Exception as exc:
