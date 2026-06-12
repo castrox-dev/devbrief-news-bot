@@ -1,48 +1,49 @@
 :root {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-serif: "Merriweather", Georgia, serif;
-  --accent: #ffb020;
-  --accent-strong: #e69500;
-  --accent-soft: rgba(255, 176, 32, 0.14);
-  --brand-blue: #4a90e2;
+  --accent: #e53935;
+  --accent-strong: #c62828;
+  --accent-soft: rgba(229, 57, 53, 0.14);
+  --brand-black: #000000;
   --brand-red: #e53935;
+  --brand-red-dark: #b71c1c;
   --gold: #ffc107;
   --blue: #4a90e2;
   --green: #10b981;
   --red: #ef4444;
   --radius: 14px;
   --radius-sm: 8px;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
   --header-h: 72px;
   --transition: 0.25s ease;
 }
 
 [data-theme="light"] {
-  --bg: #f7f8fb;
+  --bg: #f5f5f5;
   --bg-elevated: #ffffff;
-  --bg-muted: #eef1f6;
-  --text: #0f1117;
-  --text-muted: #5c6478;
-  --border: #dde3ec;
-  --header-bg: rgba(255, 255, 255, 0.94);
-  --hero-overlay: linear-gradient(180deg, transparent 25%, rgba(10, 10, 10, 0.82));
-  --skeleton: #e5e9f0;
-  --ticker-bg: #0a0a0a;
+  --bg-muted: #ebebeb;
+  --text: #0a0a0a;
+  --text-muted: #525252;
+  --border: #d4d4d4;
+  --header-bg: rgba(255, 255, 255, 0.96);
+  --hero-overlay: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.88));
+  --skeleton: #e5e5e5;
+  --ticker-bg: #000000;
   --ticker-text: #fff;
 }
 
 [data-theme="dark"] {
-  --bg: #0f1117;
-  --bg-elevated: #171b24;
-  --bg-muted: #1e2430;
-  --text: #eef2f8;
-  --text-muted: #9aa3b5;
-  --border: #2a3140;
-  --header-bg: rgba(15, 17, 23, 0.94);
-  --hero-overlay: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.88));
-  --skeleton: #252b38;
-  --ticker-bg: #000;
-  --ticker-text: #eef2f8;
+  --bg: #000000;
+  --bg-elevated: #0a0a0a;
+  --bg-muted: #141414;
+  --text: #f5f5f5;
+  --text-muted: #a3a3a3;
+  --border: #262626;
+  --header-bg: rgba(0, 0, 0, 0.96);
+  --hero-overlay: linear-gradient(180deg, transparent 15%, rgba(0, 0, 0, 0.92));
+  --skeleton: #1a1a1a;
+  --ticker-bg: #000000;
+  --ticker-text: #f5f5f5;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -102,7 +103,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  box-shadow: inset 0 -2px 0 linear-gradient(90deg, var(--accent), var(--brand-blue), transparent);
+  box-shadow: inset 0 -2px 0 linear-gradient(90deg, var(--accent), var(--brand-red-dark), transparent);
 }
 .header-inner {
   display: flex;
@@ -168,7 +169,7 @@ a { color: inherit; text-decoration: none; }
   padding: 0.6rem 1rem;
 }
 .breaking-badge {
-  background: var(--brand-red);
+  background: var(--accent);
   color: #fff;
   font-size: 0.68rem;
   font-weight: 800;
@@ -333,10 +334,10 @@ a { color: inherit; text-decoration: none; }
 }
 .updated-label { font-size: 0.82rem; color: var(--text-muted); }
 .category-head { border-left: 4px solid var(--accent); padding-left: 0.75rem; }
-.category-head.brasil { border-color: #22c55e; }
-.category-head.mercado { border-color: var(--gold); }
-.category-head.tech { border-color: var(--blue); }
-.category-head.mundo { border-color: #8b5cf6; }
+.category-head.brasil { border-color: var(--accent); }
+.category-head.mercado { border-color: var(--accent); }
+.category-head.tech { border-color: var(--accent); }
+.category-head.mundo { border-color: var(--accent); }
 .category-head a { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
 
 /* News grid */
@@ -517,7 +518,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  background: linear-gradient(135deg, var(--accent), var(--brand-blue));
+  background: linear-gradient(135deg, var(--brand-black), var(--accent-strong));
+  border: 1px solid var(--accent);
   color: #fff;
   padding: 2rem;
   border-radius: var(--radius);
@@ -527,8 +529,8 @@ a { color: inherit; text-decoration: none; }
 .cta-inner p { margin: 0; opacity: 0.92; max-width: 50ch; }
 .cta-button {
   flex-shrink: 0;
-  background: #fff;
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
   font-weight: 800;
   padding: 0.85rem 1.25rem;
   border-radius: 999px;

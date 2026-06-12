@@ -13,9 +13,9 @@ from typing import Final
 
 BRAND_NAME: Final[str] = "DevBrief News"
 LOGO_CID: Final[str] = "devbrief-logo"
-ACCENT_GOLD: Final[str] = "#FFB020"
+ACCENT_GOLD: Final[str] = "#E53935"
 ACCENT_RED: Final[str] = "#E53935"
-ACCENT_BLUE: Final[str] = "#4A90E2"
+ACCENT_BLUE: Final[str] = "#E53935"
 
 
 def _get_assets_dir() -> Path:
