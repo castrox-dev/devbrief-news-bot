@@ -23,12 +23,36 @@ FEEDS = [
     {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tecnologia", "label": "Tecnologia"},
 ]
 
-FALLBACK_IMAGES = {
-    "brasil": "https://images.unsplash.com/photo-1483728642387-6c3bddae7a35?w=800&q=80",
-    "tecnologia": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
-    "mercado": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
-    "mundo": "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80",
+FALLBACK_IMAGES: dict[str, list[str]] = {
+    "brasil": [
+        "https://images.unsplash.com/photo-1483728642387-6c3bddae7a35?w=900&q=80",
+        "https://images.unsplash.com/photo-1541872703-74c5ccc27177?w=900&q=80",
+        "https://images.unsplash.com/photo-1511578314322-379afb476865?w=900&q=80",
+    ],
+    "tecnologia": [
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&q=80",
+        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=80",
+        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=900&q=80",
+    ],
+    "mercado": [
+        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=900&q=80",
+        "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=900&q=80",
+        "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=900&q=80",
+    ],
+    "mundo": [
+        "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=900&q=80",
+        "https://images.unsplash.com/photo-1504711434967-e33886168f1c?w=900&q=80",
+        "https://images.unsplash.com/photo-1495020689067-958852a7765e?w=900&q=80",
+    ],
 }
+
+IMAGE_URL_PATTERN = re.compile(
+    r"(https?://[^\s\"'<>]+(?:\.(?:jpg|jpeg|png|webp|gif)|"
+    r"wp-content/uploads/[^\s\"'<>]+|"
+    r"i\.s\.globo\.com/[^\s\"'<>]+|"
+    r"infomoney\.com\.br/uploads/[^\s\"'<>]+))",
+    re.I,
+)
 
 TIMEOUT = 5
 USER_AGENT = "DevBriefNewsBot/1.0"
@@ -64,11 +88,72 @@ def _format_datetime(raw: str) -> str:
     return parsed.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M")
 
 
-def _extract_image(html: str, category: str) -> str:
-    match = re.search(r'src=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']', html, re.I)
+def _fallback_image(category: str, seed: str) -> str:
+    options = FALLBACK_IMAGES.get(category, FALLBACK_IMAGES["brasil"])
+    idx = sum(ord(char) for char in seed) % len(options)
+    return options[idx]
+
+
+def _normalize_image_url(url: str) -> str:
+    clean = url.strip().split("?")[0] if "?" in url and ".jpg" not in url.lower() else url.strip()
+    if clean.startswith("//"):
+        return "https:" + clean
+    return clean
+
+
+def _extract_image(html: str, category: str, seed: str = "") -> str:
+    if not html:
+        return _fallback_image(category, seed or category)
+
+    for pattern in (
+        r'(?:src|data-src|data-lazy-src)=["\']([^"\']+)["\']',
+        r'(?:url|href)=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']',
+        r"property=[\"']og:image[\"']\s+content=[\"']([^\"']+)[\"']",
+        r"content=[\"']([^\"']+)[\"']\s+property=[\"']og:image[\"']",
+    ):
+        for match in re.finditer(pattern, html, re.I):
+            candidate = _normalize_image_url(match.group(1))
+            if candidate.startswith("http") and "emoji" not in candidate.lower():
+                return candidate
+
+    match = IMAGE_URL_PATTERN.search(html)
     if match:
-        return match.group(1)
-    return FALLBACK_IMAGES.get(category, FALLBACK_IMAGES["brasil"])
+        return _normalize_image_url(match.group(1))
+
+    return _fallback_image(category, seed or html[:40])
+
+
+def _parse_item_node(node) -> tuple[str, str, str, str, str]:
+    """Extrai título, link, data, HTML bruto e imagem direta do item RSS."""
+    title = ""
+    link = ""
+    pub_raw = ""
+    html_parts: list[str] = []
+    direct_image = ""
+
+    for child in node:
+        tag = child.tag.split("}")[-1].lower()
+        if tag == "title" and child.text:
+            title = child.text.strip()
+        elif tag == "link":
+            link = (child.text or "").strip() or child.get("href", "")
+        elif tag in ("pubdate", "published", "updated") and child.text:
+            pub_raw = child.text.strip()
+        elif tag == "enclosure":
+            enc_url = child.get("url", "")
+            enc_type = (child.get("type") or "").lower()
+            if enc_url and ("image" in enc_type or re.search(r"\.(jpg|jpeg|png|webp)", enc_url, re.I)):
+                direct_image = enc_url
+        elif tag in ("content", "thumbnail"):
+            media_url = child.get("url") or child.get("href") or ""
+            medium = (child.get("medium") or child.get("type") or "").lower()
+            if media_url and ("image" in medium or "image" in tag or re.search(r"\.(jpg|jpeg|png|webp)", media_url, re.I)):
+                direct_image = direct_image or media_url
+        elif tag in ("description", "summary", "content", "encoded") and child.text:
+            html_parts.append(child.text)
+
+    combined_html = " ".join(html_parts)
+    return title, link, pub_raw, combined_html, direct_image
 
 
 def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[dict[str, Any]]:
@@ -80,23 +165,14 @@ def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[d
 
     nodes = root.findall(".//item") or root.findall(".//{*}entry")
     for node in nodes[:6]:
-        title = ""
-        link = ""
-        summary = ""
-        pub_raw = ""
-        for child in node:
-            tag = child.tag.split("}")[-1].lower()
-            if tag == "title" and child.text:
-                title = child.text.strip()
-            elif tag == "link":
-                link = (child.text or "").strip() or child.get("href", "")
-            elif tag in ("description", "summary", "content") and child.text:
-                summary = _strip_html(child.text)[:400]
-            elif tag in ("pubdate", "published", "updated") and child.text:
-                pub_raw = child.text.strip()
+        title, link, pub_raw, html_raw, direct_image = _parse_item_node(node)
 
         if not title or not link:
             continue
+
+        image = direct_image or _extract_image(html_raw, category, seed=title)
+        body = _strip_html(html_raw)
+        summary = body[:220] if body else ""
 
         items.append(
             {
@@ -105,10 +181,11 @@ def _parse_feed(xml_text: str, source: str, category: str, label: str) -> list[d
                 "source": source,
                 "category": category,
                 "category_label": label,
-                "summary": summary[:220],
+                "summary": summary,
+                "body": body[:1500],
                 "published": _format_datetime(pub_raw),
                 "published_at": _parse_datetime(pub_raw),
-                "image": _extract_image(summary, category),
+                "image": image,
             }
         )
     return items
@@ -151,9 +228,21 @@ def _public_article(item: dict[str, Any]) -> dict[str, str]:
         "category": item.get("category", "brasil"),
         "category_label": item.get("category_label", ""),
         "summary": item.get("summary", ""),
+        "body": item.get("body", item.get("summary", "")),
         "published": item.get("published", ""),
         "image": item.get("image", ""),
     }
+
+
+def find_article_by_url(url: str) -> dict[str, str] | None:
+    """Busca artigo pelo URL original (para página interna)."""
+    target = url.strip()
+    if not target:
+        return None
+    for item in fetch_all_articles():
+        if item.get("url") == target:
+            return _public_article(item)
+    return None
 
 
 def build_news_payload() -> dict[str, Any]:

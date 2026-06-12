@@ -22,6 +22,10 @@
     return div.innerHTML;
   }
 
+  function articlePageUrl(url) {
+    return "/noticia.html?u=" + encodeURIComponent(url || "");
+  }
+
   function renderCard(article, large) {
     const img = escapeHtml(article.image || "");
     const title = escapeHtml(article.title || "");
@@ -29,41 +33,44 @@
     const source = escapeHtml(article.source || "");
     const published = escapeHtml(article.published || "");
     const category = escapeHtml(article.category_label || article.category || "");
-    const url = escapeHtml(article.url || "#");
+    const internalUrl = escapeHtml(articlePageUrl(article.url));
 
     return `
-      <a href="${url}" target="_blank" rel="noopener noreferrer" class="news-card-link">
-        <article class="news-card${large ? " large" : ""}">
-          <img src="${img}" alt="" loading="lazy" onerror="this.src='/assets/logo.png'">
-          <div class="news-card-body">
-            <span class="category-tag">${category}</span>
-            <h3>${title}</h3>
-            ${summary ? `<p>${summary}</p>` : ""}
-            <footer>
-              <span>${source}</span>
-              <span>${published}</span>
-            </footer>
-          </div>
-        </article>
-      </a>`;
+      <article class="news-card${large ? " large" : ""}">
+        <a href="${internalUrl}" class="news-card-image-link">
+          <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/assets/logo.png'">
+        </a>
+        <div class="news-card-body">
+          <span class="category-tag">${category}</span>
+          <h3><a href="${internalUrl}" class="news-card-title-link">${title}</a></h3>
+          ${summary ? `<p>${summary}</p>` : ""}
+          <footer>
+            <span>${source}</span>
+            <span>${published}</span>
+          </footer>
+          <a href="${internalUrl}" class="read-more">Ver mais →</a>
+        </div>
+      </article>`;
   }
 
   function renderHero(featured) {
     const hero = document.getElementById("hero");
     if (!hero || !featured) return;
 
+    const internalUrl = escapeHtml(articlePageUrl(featured.url));
     const main = hero.querySelector(".hero-main");
     main.classList.remove("skeleton-block");
     main.innerHTML = `
-      <a href="${escapeHtml(featured.url)}" target="_blank" rel="noopener noreferrer" class="hero-link">
-        <div class="hero-image-wrap" style="background-image:url('${escapeHtml(featured.image)}')"></div>
+      <div class="hero-link">
+        <a href="${internalUrl}" class="hero-image-wrap" style="background-image:url('${escapeHtml(featured.image)}')"></a>
         <div class="hero-content">
           <span class="chip">${escapeHtml(featured.category_label)}</span>
-          <h1>${escapeHtml(featured.title)}</h1>
+          <h1><a href="${internalUrl}" class="hero-title-link">${escapeHtml(featured.title)}</a></h1>
           <p>${escapeHtml(featured.summary || "")}</p>
           <div class="hero-meta">${escapeHtml(featured.source)} · ${escapeHtml(featured.published)}</div>
+          <a href="${internalUrl}" class="read-more hero-read-more">Ver mais →</a>
         </div>
-      </a>`;
+      </div>`;
   }
 
   function renderMarket(quotes) {
