@@ -34,16 +34,22 @@ RSS_FEEDS: Final[list[dict[str, str]]] = [
     {"name": "G1 Economia", "url": "https://g1.globo.com/rss/g1/economia/", "category": "mercado"},
     {"name": "G1 Tecnologia", "url": "https://g1.globo.com/rss/g1/tecnologia/", "category": "tecnologia"},
     {"name": "InfoMoney", "url": "https://www.infomoney.com.br/feed/", "category": "mercado"},
-    {"name": "Valor Econômico", "url": "https://valor.globo.com/rss/", "category": "mercado"},
-    {"name": "Estadão Economia", "url": "https://www.estadao.com.br/rss/economia", "category": "mercado"},
     {"name": "Money Times", "url": "https://www.moneytimes.com.br/feed/", "category": "mercado"},
-    {"name": "UOL Economia", "url": "https://economia.uol.com.br/ultimas/index.xml", "category": "mercado"},
     {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tecnologia"},
     {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "category": "tecnologia"},
     {"name": "Hacker News", "url": "https://hnrss.org/frontpage", "category": "tecnologia"},
     {"name": "BBC Mundo", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "category": "mundo"},
     {"name": "CNN Brasil", "url": "https://www.cnnbrasil.com.br/feed/", "category": "brasil"},
     {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "category": "tecnologia"},
+]
+
+RSS_FEEDS_LITE: Final[list[dict[str, str]]] = [
+    {"name": "G1", "url": "https://g1.globo.com/rss/g1/", "category": "brasil"},
+    {"name": "G1 Economia", "url": "https://g1.globo.com/rss/g1/economia/", "category": "mercado"},
+    {"name": "G1 Tecnologia", "url": "https://g1.globo.com/rss/g1/tecnologia/", "category": "tecnologia"},
+    {"name": "InfoMoney", "url": "https://www.infomoney.com.br/feed/", "category": "mercado"},
+    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tecnologia"},
+    {"name": "CNN Brasil", "url": "https://www.cnnbrasil.com.br/feed/", "category": "brasil"},
 ]
 
 
@@ -191,32 +197,42 @@ def _normalize_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", title.lower())[:80]
 
 
-def fetch_news_articles(max_age_hours: int = MAX_AGE_HOURS) -> list[NewsArticle]:
+def fetch_news_articles(
+    max_age_hours: int = MAX_AGE_HOURS,
+    *,
+    lite: bool = False,
+) -> list[NewsArticle]:
     """
     Coleta artigos de múltiplos feeds RSS.
 
     Args:
         max_age_hours: Janela máxima de horas para considerar notícias.
+        lite: Usa subset reduzido de feeds (rápido, para fallback web).
 
     Returns:
         Lista de artigos únicos ordenados por data (mais recentes primeiro).
     """
+    feeds = RSS_FEEDS_LITE if lite else RSS_FEEDS
+    timeout = 8 if lite else REQUEST_TIMEOUT
+    max_total = 30 if lite else MAX_TOTAL
+    max_per_feed = 5 if lite else MAX_PER_FEED
+
     cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
     all_articles: list[NewsArticle] = []
     seen_titles: set[str] = set()
 
-    for feed in RSS_FEEDS:
+    for feed in feeds:
         try:
             logger.info("Coletando RSS: %s", feed["name"])
             response = requests.get(
                 feed["url"],
-                timeout=REQUEST_TIMEOUT,
+                timeout=timeout,
                 headers={"User-Agent": "DevBriefNewsBot/1.0"},
             )
             response.raise_for_status()
             items = _parse_rss_items(response.text, feed["name"], feed["category"])
 
-            for article in items:
+            for article in items[:max_per_feed]:
                 if not _is_recent(article, cutoff):
                     continue
                 key = _normalize_title(article.title)
@@ -232,7 +248,7 @@ def fetch_news_articles(max_age_hours: int = MAX_AGE_HOURS) -> list[NewsArticle]
         key=lambda a: a.published or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     )
-    return all_articles[:MAX_TOTAL]
+    return all_articles[:max_total]
 
 
 def select_articles_for_ai(articles: list[NewsArticle]) -> list[NewsArticle]:

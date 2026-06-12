@@ -111,11 +111,16 @@ def fetch_articles_from_db(max_age_hours: int = WEB_MAX_AGE_HOURS, limit: int = 
     return _rows_to_articles(rows)
 
 
-def build_web_payload_from_db() -> dict[str, object]:
-    """Monta payload JSON da landing page a partir do banco."""
-    articles = fetch_articles_from_db()
-    web_articles = articles_to_web_payload(articles)
+def count_articles_in_db() -> int:
+    """Retorna quantidade de artigos no banco."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS total FROM articles")
+            row = cur.fetchone()
+    return int(row["total"]) if row else 0
 
+
+def _group_by_category(web_articles: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
     by_category: dict[str, list[dict[str, str]]] = {
         "brasil": [],
         "mundo": [],
@@ -126,6 +131,28 @@ def build_web_payload_from_db() -> dict[str, object]:
         category = item.get("category", "brasil")
         if category in by_category and len(by_category[category]) < 8:
             by_category[category].append(item)
+    return by_category
+
+
+def build_web_payload_from_rss(*, lite: bool = True) -> dict[str, object]:
+    """Monta payload da landing page buscando RSS diretamente (fallback rápido)."""
+    articles = fetch_news_articles(max_age_hours=24, lite=lite)
+    web_articles = articles_to_web_payload(articles)
+    return {
+        "ok": True,
+        "source": "rss_lite" if lite else "rss",
+        "featured": web_articles[0] if web_articles else None,
+        "latest": web_articles[:12],
+        "categories": _group_by_category(web_articles),
+        "updated_at": web_articles[0]["published"] if web_articles else "",
+        "total": len(web_articles),
+    }
+
+
+def build_web_payload_from_db() -> dict[str, object]:
+    """Monta payload JSON da landing page a partir do banco."""
+    articles = fetch_articles_from_db()
+    web_articles = articles_to_web_payload(articles)
 
     last_sync = ""
     if web_articles:
@@ -136,10 +163,33 @@ def build_web_payload_from_db() -> dict[str, object]:
         "source": "database",
         "featured": web_articles[0] if web_articles else None,
         "latest": web_articles[:12],
-        "categories": by_category,
+        "categories": _group_by_category(web_articles),
         "updated_at": last_sync,
         "total": len(web_articles),
     }
+
+
+def build_web_payload_for_site() -> dict[str, object]:
+    """
+    Carrega notícias para o site.
+
+    1. Tenta banco; se vazio, faz sync automático.
+    2. Se ainda vazio ou banco indisponível, usa RSS rápido.
+    """
+    try:
+        if count_articles_in_db() == 0:
+            logger.info("Banco vazio — executando sync automático na primeira visita.")
+            sync_articles_from_rss(max_age_hours=24)
+
+        payload = build_web_payload_from_db()
+        if int(payload.get("total", 0)) > 0:
+            return payload
+
+        logger.warning("Banco sem artigos após sync — fallback RSS.")
+    except Exception as exc:
+        logger.warning("Banco indisponível (%s) — fallback RSS.", exc)
+
+    return build_web_payload_from_rss(lite=True)
 
 
 def add_subscriber(email: str) -> bool:

@@ -225,6 +225,14 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   margin-bottom: 0.75rem;
 }
+.empty-hero {
+  min-height: 320px;
+  justify-content: center;
+  color: var(--text);
+  background: var(--bg-muted);
+}
+.empty-hero h1 { color: var(--text); font-size: 1.5rem; }
+.empty-hero p { color: var(--text-muted); opacity: 1; }
 .hero-content h1 {
   font-family: var(--font-serif);
   font-size: clamp(1.6rem, 3vw, 2.4rem);

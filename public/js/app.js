@@ -111,11 +111,32 @@
     text.textContent = featured.title;
   }
 
+  function showEmptyState(message) {
+    const label = document.getElementById("updated-label");
+    if (label) label.textContent = message || "Nenhuma notícia disponível no momento.";
+
+    const hero = document.querySelector(".hero-main");
+    if (hero) {
+      hero.classList.remove("skeleton-block");
+      hero.innerHTML = `
+        <div class="hero-content empty-hero">
+          <span class="chip">Aguarde</span>
+          <h1>Carregando as últimas notícias...</h1>
+          <p>O site atualiza a cada 5 minutos. Se persistir, recarregue a página.</p>
+        </div>`;
+    }
+  }
+
   async function loadNews() {
     try {
       const res = await fetch("/api/news");
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Falha ao carregar");
+      if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao carregar");
+
+      if (!data.featured && (!data.latest || !data.latest.length)) {
+        showEmptyState("Sincronizando notícias pela primeira vez...");
+        return;
+      }
 
       renderHero(data.featured);
       renderLatest(data.latest);
@@ -129,13 +150,15 @@
       renderGrid("grid-mundo", cats.mundo);
 
       const label = document.getElementById("updated-label");
-      if (label && data.updated_at) {
-        label.textContent = "Atualizado: " + data.updated_at;
+      if (label) {
+        const source = data.source === "database" ? "" : " (tempo real)";
+        label.textContent = data.updated_at
+          ? "Atualizado: " + data.updated_at + source
+          : "Notícias atualizadas";
       }
     } catch (err) {
       console.error(err);
-      const label = document.getElementById("updated-label");
-      if (label) label.textContent = "Notícias temporariamente indisponíveis.";
+      showEmptyState("Notícias temporariamente indisponíveis. Recarregue em alguns segundos.");
     }
   }
 
