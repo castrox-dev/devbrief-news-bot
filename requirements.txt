@@ -1,0 +1,5 @@
+openai>=1.68.0
+APScheduler>=3.10.4
+python-dotenv>=1.0.1
+requests>=2.32.3
+tzdata>=2024.2

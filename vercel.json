@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "api/cron/daily.py": {
+      "maxDuration": 300
+    },
+    "api/cron/breaking.py": {
+      "maxDuration": 120
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/breaking",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

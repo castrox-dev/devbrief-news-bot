@@ -1,0 +1,105 @@
+Com base nas NOTÍCIAS REAIS da seção "NOTÍCIAS REAIS COLETADAS", gere o briefing no formato EXATO do exemplo.
+
+=== REGRAS (OBRIGATÓRIO) ===
+- Layout CLEAN: espaçado, fácil de ler no celular e no e-mail
+- UMA ideia por bloco — NUNCA amontoe tudo num parágrafo gigante
+- Subseção: emoji + título em UMA linha; texto nas linhas ABAIXO (separadas)
+- Links reais SOMENTE ao final da subseção: [Fonte](url)
+- NÃO invente URLs
+- Evite **negrito** e listas com * — prefira linhas simples ou parágrafos curtos
+- Português do Brasil
+- SEMPRE inclua a seção 10 (Bordão do Dia) com frase memorável original
+
+=== EXEMPLO DE FORMATO (SIGA ESTE ESTILO) ===
+
+📰 DevBrief News — Resumo das Principais Notícias (Últimas 24h)
+
+1. Resumo Executivo
+
+O tema dominante continua sendo a corrida global pela Inteligência Artificial...
+
+Além disso, ataques cibernéticos continuam crescendo globalmente...
+
+2. Brasil
+
+🇧🇷 IA e Infraestrutura
+O debate sobre infraestrutura para IA segue avançando no Brasil...
+[Fonte](url)
+
+🇧🇷 Cibersegurança
+O Brasil permanece entre os países mais visados por ransomware...
+[Fonte](url)
+
+3. Mundo
+
+🌎 Corrida bilionária da IA
+OpenAI confirmou o processo de preparação para IPO nos EUA...
+A Anthropic também avança para os mercados públicos...
+[Fonte](url)
+
+4. Tecnologia
+
+🤖 OpenAI
+A OpenAI continua expandindo sua base de usuários...
+O novo Lockdown Mode do ChatGPT ganhou destaque...
+[Fonte](url)
+
+🍎 Apple
+Durante a WWDC, a Apple apresentou uma nova geração da Siri...
+[Fonte](url)
+
+5. Mercado e Investimentos
+
+📈 Cenário do dia
+Use os dados de cotações fornecidos (dólar, euro, bitcoin) quando disponíveis.
+Comente movimentos de Selic, Copom, Ibovespa, Fed, inflação e petróleo se houver nas fontes.
+
+📈 Destaques corporativos
+OpenAI e Anthropic caminham para IPOs históricos.
+Investimentos em data centers atingem níveis recordes.
+Empresas de infraestrutura para IA continuam atraindo capital massivo.
+
+7. Resumo para Empreendedores
+
+Oportunidades
+
+✅ SaaS com IA para produtividade corporativa
+✅ Automação de atendimento e vendas
+
+Alertas
+
+⚠️ Dependência excessiva de APIs de terceiros
+⚠️ Custos crescentes de inferência
+
+9. 📌 O que merece atenção hoje
+
+🔥 Prioridade Alta
+
+Acompanhamento da abertura de capital da OpenAI.
+Expansão da Anthropic e impacto no mercado corporativo.
+Crescimento dos ataques de ransomware.
+
+📊 Tendência da Semana
+
+A disputa deixou de ser apenas entre modelos de IA. A nova batalha está em três frentes:
+
+Infraestrutura (chips e data centers)
+Ferramentas para desenvolvedores
+Plataformas corporativas de IA
+
+10. 💬 Bordão do Dia
+
+"Quem dominar a IA hoje, escreve as regras do mercado amanhã."
+
+=== SUAS SEÇÕES (COMPLETAS) ===
+
+1. Resumo Executivo — 2 parágrafos narrativos
+2. Brasil — mín. 3 subseções 🇧🇷 com parágrafo + link
+3. Mundo — mín. 2 blocos 🌎
+4. Tecnologia — 🤖 OpenAI, 🍎 Apple, 🟢 Google, 🔵 Microsoft, 🟣 Anthropic + 💻/🔒 se houver
+5. Mercado e Investimentos — 📈 Cenário do dia (cotações reais se disponíveis) + 📈 Destaques corporativos + tendências
+6. Desenvolvimento de Software — 👨‍💻 + 🔒 DevSecOps
+7. Resumo para Empreendedores — Oportunidades (✅ x5) + Alertas (⚠️ x3)
+8. Curiosidades — 💡 x2 mínimo
+9. 📌 O que merece atenção — 🔥 Prioridade Alta (5 linhas) + 📊 Tendência da Semana
+10. 💬 Bordão do Dia — frase original, inspiradora, entre aspas
