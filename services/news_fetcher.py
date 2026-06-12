@@ -47,6 +47,21 @@ RSS_FEEDS: Final[list[dict[str, str]]] = [
 ]
 
 
+CATEGORY_IMAGES: Final[dict[str, str]] = {
+    "brasil": "https://images.unsplash.com/photo-1483728642387-6c3bddae7a35?w=800&q=80",
+    "mundo": "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80",
+    "tecnologia": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
+    "mercado": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
+}
+
+CATEGORY_LABELS: Final[dict[str, str]] = {
+    "brasil": "Brasil",
+    "mundo": "Mundo",
+    "tecnologia": "Tecnologia",
+    "mercado": "Mercado",
+}
+
+
 @dataclass
 class NewsArticle:
     """Representa um artigo coletado de feed RSS."""
@@ -57,6 +72,7 @@ class NewsArticle:
     category: str
     summary: str
     published: datetime | None = None
+    image: str = ""
 
 
 def _strip_html(text: str) -> str:
@@ -76,6 +92,33 @@ def _parse_rss_date(raw: str) -> datetime | None:
         return parsed
     except Exception:
         return None
+
+
+def _extract_image(item: ElementTree.Element, raw_html: str) -> str:
+    """Extrai URL de imagem de item RSS (media, enclosure ou HTML)."""
+    for child in item:
+        local = child.tag.split("}")[-1].lower()
+        url = child.get("url") or child.get("href") or ""
+        media_type = (child.get("type") or child.get("medium") or "").lower()
+        if url and ("image" in media_type or local in ("thumbnail", "content")):
+            if local == "content" and child.get("medium") == "image":
+                return url
+            if "image" in media_type or url.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                return url
+
+    enclosure = item.find("enclosure")
+    if enclosure is not None:
+        enc_url = enclosure.get("url", "")
+        enc_type = (enclosure.get("type") or "").lower()
+        if enc_url and "image" in enc_type:
+            return enc_url
+
+    match = re.search(
+        r'src=["\']([^"\']+\.(?:jpg|jpeg|png|webp)(?:\?[^"\']*)?)["\']',
+        raw_html,
+        flags=re.IGNORECASE,
+    )
+    return match.group(1) if match else ""
 
 
 def _extract_text(element: ElementTree.Element | None, tag: str) -> str:
@@ -110,11 +153,9 @@ def _parse_rss_items(xml_content: str, source: str, category: str) -> list[NewsA
             if link_el is not None and link_el.get("href"):
                 link = link_el.get("href", "")
 
-        summary = _strip_html(_extract_text(item, "description"))
-        if not summary:
-            summary = _strip_html(_extract_text(item, "summary"))
-        if not summary:
-            summary = _strip_html(_extract_text(item, "content"))
+        raw_description = _extract_text(item, "description") or _extract_text(item, "summary") or _extract_text(item, "content")
+        summary = _strip_html(raw_description)
+        image = _extract_image(item, raw_description)
 
         pub_raw = _extract_text(item, "pubDate") or _extract_text(item, "published") or _extract_text(item, "updated")
         published = _parse_rss_date(pub_raw)
@@ -128,6 +169,7 @@ def _parse_rss_items(xml_content: str, source: str, category: str) -> list[NewsA
                     category=category,
                     summary=summary[:400] if summary else "",
                     published=published,
+                    image=image,
                 )
             )
 
@@ -259,3 +301,40 @@ def format_articles_for_prompt(articles: list[NewsArticle]) -> str:
 
     lines.append(f"Total de fontes disponíveis: {len(articles)}")
     return "\n".join(lines)
+
+
+def get_article_image(article: NewsArticle) -> str:
+    """Retorna imagem do artigo ou fallback por categoria."""
+    if article.image:
+        return article.image
+    return CATEGORY_IMAGES.get(article.category, CATEGORY_IMAGES["brasil"])
+
+
+def format_published_label(published: datetime | None) -> str:
+    """Formata data para exibição na web."""
+    if published is None:
+        return "Agora"
+    pub = published
+    if pub.tzinfo is None:
+        pub = pub.replace(tzinfo=timezone.utc)
+    local = pub.astimezone(timezone(timedelta(hours=-3)))
+    return local.strftime("%d/%m/%Y %H:%M")
+
+
+def articles_to_web_payload(articles: list[NewsArticle]) -> list[dict[str, str]]:
+    """Serializa artigos para consumo pela landing page."""
+    payload: list[dict[str, str]] = []
+    for article in articles:
+        payload.append(
+            {
+                "title": article.title,
+                "url": article.url,
+                "source": article.source,
+                "category": article.category,
+                "category_label": CATEGORY_LABELS.get(article.category, article.category),
+                "summary": article.summary[:220] if article.summary else "",
+                "published": format_published_label(article.published),
+                "image": get_article_image(article),
+            }
+        )
+    return payload
