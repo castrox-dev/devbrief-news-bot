@@ -219,6 +219,13 @@ def main() -> None:
         misfire_grace_time=300,
     )
     logger.info("Sync do site: a cada 5 minutos. Telegram/e-mail: só às %s.", config["schedule_time"])
+
+    logger.info("Executando busca inicial de notícias ao iniciar...")
+    try:
+        run_sync_news_job(config)
+    except Exception:
+        logger.error("Sync inicial falhou — próxima tentativa em 5 min.")
+
     start_scheduler(daily_scheduler)
 
 

@@ -111,6 +111,23 @@
     text.textContent = featured.title;
   }
 
+  function showLoadingState() {
+    const label = document.getElementById("updated-label");
+    if (label) label.textContent = "Buscando notícias agora...";
+
+    const hero = document.querySelector(".hero-main");
+    if (hero && hero.classList.contains("skeleton-block")) {
+      hero.classList.remove("skeleton-block");
+      hero.innerHTML = `
+        <div class="hero-content empty-hero loading-hero">
+          <span class="chip">Atualizando</span>
+          <h1>Buscando as últimas notícias...</h1>
+          <p>Aguarde, estamos coletando RSS em tempo real.</p>
+          <div class="loading-spinner" aria-hidden="true"></div>
+        </div>`;
+    }
+  }
+
   function showEmptyState(message) {
     const label = document.getElementById("updated-label");
     if (label) label.textContent = message || "Nenhuma notícia disponível no momento.";
@@ -128,8 +145,9 @@
   }
 
   async function loadNews() {
+    showLoadingState();
     try {
-      const res = await fetch("/api/news");
+      const res = await fetch("/api/news?refresh=1&t=" + Date.now(), { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao carregar");
 
@@ -197,6 +215,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     initTheme();
+    showLoadingState();
     loadNews();
 
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);

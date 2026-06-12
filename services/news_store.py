@@ -19,14 +19,18 @@ RETENTION_DAYS = 7
 WEB_MAX_AGE_HOURS = 72
 
 
-def sync_articles_from_rss(max_age_hours: int = 24) -> dict[str, int]:
+def sync_articles_from_rss(max_age_hours: int = 24, *, lite: bool = False) -> dict[str, int]:
     """
     Busca RSS e sincroniza artigos no banco.
+
+    Args:
+        max_age_hours: Janela de horas dos artigos.
+        lite: Feeds reduzidos (rápido, ideal para atualização do site).
 
     Returns:
         Contadores fetched, upserted, pruned.
     """
-    articles = fetch_news_articles(max_age_hours=max_age_hours)
+    articles = fetch_news_articles(max_age_hours=max_age_hours, lite=lite)
     upserted = 0
 
     with get_connection() as conn:
@@ -169,25 +173,23 @@ def build_web_payload_from_db() -> dict[str, object]:
     }
 
 
-def build_web_payload_for_site() -> dict[str, object]:
+def build_web_payload_for_site(*, refresh: bool = True) -> dict[str, object]:
     """
     Carrega notícias para o site.
 
-    1. Tenta banco; se vazio, faz sync automático.
-    2. Se ainda vazio ou banco indisponível, usa RSS rápido.
+    Sempre busca RSS ao abrir (refresh=True), salva no banco e retorna.
+    Se o banco falhar, usa RSS direto.
     """
-    try:
-        if count_articles_in_db() == 0:
-            logger.info("Banco vazio — executando sync automático na primeira visita.")
-            sync_articles_from_rss(max_age_hours=24)
-
-        payload = build_web_payload_from_db()
-        if int(payload.get("total", 0)) > 0:
-            return payload
-
-        logger.warning("Banco sem artigos após sync — fallback RSS.")
-    except Exception as exc:
-        logger.warning("Banco indisponível (%s) — fallback RSS.", exc)
+    if refresh:
+        try:
+            logger.info("Atualizando notícias do site (busca RSS)...")
+            sync_articles_from_rss(max_age_hours=24, lite=True)
+            payload = build_web_payload_from_db()
+            if int(payload.get("total", 0)) > 0:
+                payload["source"] = "database_fresh"
+                return payload
+        except Exception as exc:
+            logger.warning("Sync/banco indisponível (%s) — RSS direto.", exc)
 
     return build_web_payload_from_rss(lite=True)
 
