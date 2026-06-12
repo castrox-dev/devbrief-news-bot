@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 
-from api._shared import is_authorized, send_json, setup_api_logging, validate_config
+from lib.vercel_utils import is_authorized, send_json, setup_api_logging, validate_config
 from services.jobs import load_config_from_env, run_breaking_news_job
 
 

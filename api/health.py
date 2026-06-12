@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 
-from api._shared import send_json, setup_api_logging
+from lib.vercel_utils import send_json, setup_api_logging
 
 
 class handler(BaseHTTPRequestHandler):

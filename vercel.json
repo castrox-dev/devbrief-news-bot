@@ -1,12 +1,15 @@
 {
-  "functions": {
-    "api/daily.py": {
-      "maxDuration": 300
-    },
-    "api/breaking.py": {
-      "maxDuration": 120
-    }
-  },
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    { "src": "api/daily.py", "use": "@vercel/python" },
+    { "src": "api/breaking.py", "use": "@vercel/python" },
+    { "src": "api/health.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/daily", "dest": "api/daily.py" },
+    { "src": "/api/breaking", "dest": "api/breaking.py" },
+    { "src": "/api/health", "dest": "api/health.py" }
+  ],
   "crons": [
     {
       "path": "/api/daily",
