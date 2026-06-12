@@ -125,32 +125,15 @@ def count_articles_in_db() -> int:
 
 
 def _group_by_category(web_articles: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
-    by_category: dict[str, list[dict[str, str]]] = {
-        "brasil": [],
-        "mundo": [],
-        "tecnologia": [],
-        "mercado": [],
-    }
-    for item in web_articles:
-        category = item.get("category", "brasil")
-        if category in by_category and len(by_category[category]) < 8:
-            by_category[category].append(item)
-    return by_category
+    from services.web_payload import _group_by_category as group_fn
+
+    return group_fn(web_articles)
 
 
 def build_web_payload_from_rss(*, lite: bool = True) -> dict[str, object]:
-    """Monta payload da landing page buscando RSS diretamente (fallback rápido)."""
-    articles = fetch_news_articles(max_age_hours=24, lite=lite)
-    web_articles = articles_to_web_payload(articles)
-    return {
-        "ok": True,
-        "source": "rss_lite" if lite else "rss",
-        "featured": web_articles[0] if web_articles else None,
-        "latest": web_articles[:12],
-        "categories": _group_by_category(web_articles),
-        "updated_at": web_articles[0]["published"] if web_articles else "",
-        "total": len(web_articles),
-    }
+    from services.web_payload import build_web_payload_from_rss as build_fn
+
+    return build_fn(lite=lite)
 
 
 def build_web_payload_from_db() -> dict[str, object]:
@@ -174,22 +157,15 @@ def build_web_payload_from_db() -> dict[str, object]:
 
 
 def build_web_payload_for_site(*, refresh: bool = True) -> dict[str, object]:
-    """
-    Carrega notícias para o site.
-
-    Sempre busca RSS ao abrir (refresh=True), salva no banco e retorna.
-    Se o banco falhar, usa RSS direto.
-    """
-    if refresh:
-        try:
-            logger.info("Atualizando notícias do site (busca RSS)...")
-            sync_articles_from_rss(max_age_hours=24, lite=True)
-            payload = build_web_payload_from_db()
-            if int(payload.get("total", 0)) > 0:
-                payload["source"] = "database_fresh"
-                return payload
-        except Exception as exc:
-            logger.warning("Sync/banco indisponível (%s) — RSS direto.", exc)
+    """Usado pelo sync/cron — busca RSS completo, salva no banco e retorna."""
+    try:
+        if refresh:
+            sync_articles_from_rss(max_age_hours=24, lite=False)
+        payload = build_web_payload_from_db()
+        if int(payload.get("total", 0)) > 0:
+            return payload
+    except Exception as exc:
+        logger.warning("Banco indisponível (%s).", exc)
 
     return build_web_payload_from_rss(lite=True)
 

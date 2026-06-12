@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import contextmanager
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 
-import psycopg
-from psycopg.rows import dict_row
+if TYPE_CHECKING:
+    import psycopg
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,11 @@ def get_database_url() -> str:
 
 
 @contextmanager
-def get_connection() -> Generator[psycopg.Connection, None, None]:
+def get_connection() -> Generator["psycopg.Connection", None, None]:
     """Context manager de conexão com o PostgreSQL."""
+    import psycopg
+    from psycopg.rows import dict_row
+
     conn = psycopg.connect(get_database_url(), row_factory=dict_row)
     try:
         ensure_schema(conn)
@@ -58,7 +61,7 @@ def get_connection() -> Generator[psycopg.Connection, None, None]:
         conn.close()
 
 
-def ensure_schema(conn: psycopg.Connection) -> None:
+def ensure_schema(conn: "psycopg.Connection") -> None:
     """Cria tabelas se ainda não existirem."""
     with conn.cursor() as cur:
         cur.execute(SCHEMA_SQL)

@@ -1,4 +1,4 @@
-"""Endpoint público — notícias para a landing page."""
+"""Endpoint público — notícias para a landing page (RSS direto, sem banco)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler
 
 from lib.vercel_utils import send_json, setup_api_logging
 from services.market_data import fetch_market_quotes
-from services.news_store import build_web_payload_for_site
+from services.web_payload import build_web_payload_from_rss
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class handler(BaseHTTPRequestHandler):
         setup_api_logging()
 
         try:
-            payload = build_web_payload_for_site()
+            payload = build_web_payload_from_rss(lite=True)
             payload["market"] = fetch_market_quotes()
             send_json(self, 200, payload)
         except Exception as exc:

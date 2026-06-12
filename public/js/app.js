@@ -147,8 +147,14 @@
   async function loadNews() {
     showLoadingState();
     try {
-      const res = await fetch("/api/news?refresh=1&t=" + Date.now(), { cache: "no-store" });
-      const data = await res.json();
+      const res = await fetch("/api/news?t=" + Date.now(), { cache: "no-store" });
+      const raw = await res.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error("Servidor retornou resposta inválida. Aguarde o redeploy.");
+      }
       if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao carregar");
 
       if (!data.featured && (!data.latest || !data.latest.length)) {

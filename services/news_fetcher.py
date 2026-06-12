@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -197,6 +198,33 @@ def _normalize_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", title.lower())[:80]
 
 
+def _fetch_single_feed(
+    feed: dict[str, str],
+    cutoff: datetime,
+    timeout: int,
+    max_per_feed: int,
+) -> list[NewsArticle]:
+    """Coleta artigos de um único feed RSS."""
+    articles: list[NewsArticle] = []
+    try:
+        logger.info("Coletando RSS: %s", feed["name"])
+        response = requests.get(
+            feed["url"],
+            timeout=timeout,
+            headers={"User-Agent": "DevBriefNewsBot/1.0"},
+        )
+        response.raise_for_status()
+        items = _parse_rss_items(response.text, feed["name"], feed["category"])
+
+        for article in items[:max_per_feed]:
+            if not _is_recent(article, cutoff):
+                continue
+            articles.append(article)
+    except Exception as exc:
+        logger.warning("Falha ao coletar %s: %s", feed["name"], exc)
+    return articles
+
+
 def fetch_news_articles(
     max_age_hours: int = MAX_AGE_HOURS,
     *,
@@ -221,28 +249,27 @@ def fetch_news_articles(
     all_articles: list[NewsArticle] = []
     seen_titles: set[str] = set()
 
-    for feed in feeds:
-        try:
-            logger.info("Coletando RSS: %s", feed["name"])
-            response = requests.get(
-                feed["url"],
-                timeout=timeout,
-                headers={"User-Agent": "DevBriefNewsBot/1.0"},
-            )
-            response.raise_for_status()
-            items = _parse_rss_items(response.text, feed["name"], feed["category"])
-
-            for article in items[:max_per_feed]:
-                if not _is_recent(article, cutoff):
-                    continue
+    if lite:
+        with ThreadPoolExecutor(max_workers=min(6, len(feeds))) as executor:
+            futures = [
+                executor.submit(_fetch_single_feed, feed, cutoff, timeout, max_per_feed)
+                for feed in feeds
+            ]
+            for future in as_completed(futures):
+                for article in future.result():
+                    key = _normalize_title(article.title)
+                    if key in seen_titles:
+                        continue
+                    seen_titles.add(key)
+                    all_articles.append(article)
+    else:
+        for feed in feeds:
+            for article in _fetch_single_feed(feed, cutoff, timeout, max_per_feed):
                 key = _normalize_title(article.title)
                 if key in seen_titles:
                     continue
                 seen_titles.add(key)
                 all_articles.append(article)
-
-        except Exception as exc:
-            logger.warning("Falha ao coletar %s: %s", feed["name"], exc)
 
     all_articles.sort(
         key=lambda a: a.published or datetime.min.replace(tzinfo=timezone.utc),
