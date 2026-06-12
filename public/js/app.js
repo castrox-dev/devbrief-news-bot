@@ -80,10 +80,47 @@
       </div>`;
   }
 
-  function renderMarket(quotes) {
+  function parseAwesomeQuotes(data) {
+    const map = { USDBRL: "USD/BRL", EURBRL: "EUR/BRL", BTCBRL: "BTC/BRL" };
+    const quotes = [];
+    Object.keys(map).forEach(function (key) {
+      const item = data[key];
+      if (!item) return;
+      const pctRaw = String(item.pctChange || "0").replace(",", ".");
+      const pctValue = parseFloat(pctRaw) || 0;
+      quotes.push({
+        label: map[key],
+        value: String(item.bid || "—"),
+        change: (pctValue >= 0 ? "+" : "") + pctValue.toFixed(2) + "%",
+        positive: pctValue >= 0,
+      });
+    });
+    return quotes;
+  }
+
+  async function fetchMarketClientFallback() {
+    try {
+      const res = await fetch(
+        "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL",
+        { cache: "no-store" }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return parseAwesomeQuotes(data);
+    } catch (err) {
+      console.warn("Fallback cliente de cotações falhou:", err);
+      return [];
+    }
+  }
+
+  async function renderMarket(quotes) {
     const list = document.getElementById("market-list");
     const ticker = document.getElementById("ticker-track");
     if (!list || !ticker) return;
+
+    if (!quotes || !quotes.length) {
+      quotes = await fetchMarketClientFallback();
+    }
 
     if (!quotes || !quotes.length) {
       const msg = escapeHtml(i18n.t("market.unavailable"));
@@ -189,7 +226,7 @@
 
       renderHero(data.featured);
       renderLatest(data.latest);
-      renderMarket(data.market);
+      await renderMarket(data.market);
       showBreaking(data.featured);
 
       const cats = data.categories || {};
