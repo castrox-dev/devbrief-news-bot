@@ -108,38 +108,6 @@
     }
   }
 
-  async function handleSubscribe(event) {
-    event.preventDefault();
-    const form = event.target;
-    const feedback = document.getElementById("form-feedback");
-    const email = form.email.value.trim();
-    const button = form.querySelector("button");
-
-    feedback.textContent = "";
-    feedback.className = "form-feedback";
-    button.disabled = true;
-    button.textContent = i18n.t("subscribe.sending");
-
-    try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Erro ao inscrever");
-      feedback.textContent = data.message;
-      feedback.classList.add("success");
-      form.reset();
-    } catch (err) {
-      feedback.textContent = err.message || i18n.t("subscribe.error");
-      feedback.classList.add("error");
-    } finally {
-      button.disabled = false;
-      button.textContent = i18n.t("newsletter.submit");
-    }
-  }
-
   function handleLangChange(lang) {
     i18n.setLang(lang);
     i18n.applyI18n();
@@ -152,7 +120,6 @@
     initLang();
     loadArticle();
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
-    document.getElementById("subscribe-form")?.addEventListener("submit", handleSubscribe);
     document.querySelectorAll("[data-lang-btn]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         handleLangChange(btn.getAttribute("data-lang-btn"));
