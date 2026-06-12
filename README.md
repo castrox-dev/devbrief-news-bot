@@ -151,8 +151,8 @@ O bot foi adaptado para rodar na Vercel com dois cron jobs:
 
 | Job | Horário | Endpoint |
 |-----|---------|----------|
-| Briefing diário | 07:00 (Brasília) | `/api/cron/daily` |
-| Breaking news | A cada 30 min | `/api/cron/breaking` |
+| Briefing diário | 07:00 (Brasília) | `/api/daily` |
+| Breaking news | A cada 30 min | `/api/breaking` |
 
 ### 1. Pré-requisitos
 
@@ -187,7 +187,7 @@ No painel **Settings → Environment Variables**, configure:
 
 ```text
 GET https://seu-projeto.vercel.app/api/health
-GET https://seu-projeto.vercel.app/api/cron/daily
+GET https://seu-projeto.vercel.app/api/daily
   Header: Authorization: Bearer SEU_CRON_SECRET
 ```
 
@@ -200,7 +200,7 @@ Na Vercel não existe processo 24/7. O bot simula isso com:
 
 ### Plano Hobby vs Pro
 
-- **Hobby**: apenas 1 cron por dia → briefing diário funciona; breaking news precisa de serviço externo (ex.: [cron-job.org](https://cron-job.org)) chamando `/api/cron/breaking` a cada 30 min
+- **Hobby**: apenas 1 cron por dia → briefing diário funciona; breaking news precisa de serviço externo (ex.: [cron-job.org](https://cron-job.org)) chamando `/api/breaking` a cada 30 min
 - **Pro**: ambos os crons funcionam nativamente
 
 ## Estrutura do projeto
@@ -215,9 +215,8 @@ daily-news-bot/
 ├── .env.example
 ├── README.md
 ├── api/
-│   ├── cron/
-│   │   ├── daily.py
-│   │   └── breaking.py
+│   ├── daily.py
+│   ├── breaking.py
 │   └── health.py
 ├── services/
 │   ├── jobs.py

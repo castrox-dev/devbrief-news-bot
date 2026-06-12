@@ -1,4 +1,4 @@
-"""Endpoint Vercel Cron — verificação de breaking news a cada 30 minutos."""
+"""Endpoint — verificação de breaking news (disparado pelo cron-job.org)."""
 
 from __future__ import annotations
 
