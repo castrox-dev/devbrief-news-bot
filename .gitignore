@@ -12,3 +12,4 @@ venv/
 .venv/
 logs/*.log
 !logs/.gitkeep
+.vercel
