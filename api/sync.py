@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 import os
+import ssl
 import sys
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -43,49 +45,66 @@ SCHEMA_STATEMENTS = [
 ]
 
 
-def _sync_to_database(articles: list[dict]) -> int:
-    """Grava artigos no Neon PostgreSQL."""
-    import psycopg
+def _connect_db():
+    """Abre conexão PostgreSQL (pg8000 — pure Python, ok na Vercel)."""
+    import pg8000.native
 
     db_url = os.getenv("DATABASE_URL", "").strip()
     if not db_url:
         raise ValueError("DATABASE_URL ausente nas variáveis de ambiente da Vercel.")
 
-    conn = psycopg.connect(db_url)
+    parsed = urlparse(db_url)
+    query = parse_qs(parsed.query)
+    ssl_mode = (query.get("sslmode") or [""])[0]
+    use_ssl = ssl_mode in {"require", "verify-ca", "verify-full"}
+
+    kwargs = {
+        "user": parsed.username or "",
+        "password": parsed.password or "",
+        "host": parsed.hostname or "localhost",
+        "port": parsed.port or 5432,
+        "database": (parsed.path or "/").lstrip("/"),
+    }
+    if use_ssl:
+        kwargs["ssl_context"] = ssl.create_default_context()
+
+    return pg8000.native.Connection(**kwargs)
+
+
+def _sync_to_database(articles: list[dict]) -> int:
+    """Grava artigos no Neon PostgreSQL."""
+    conn = _connect_db()
     upserted = 0
     try:
-        with conn.cursor() as cur:
-            for statement in SCHEMA_STATEMENTS:
-                cur.execute(statement)
-            for article in articles:
-                cur.execute(
-                    """
-                    INSERT INTO articles (url, title, summary, source, category, image, published_at, synced_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
-                    ON CONFLICT (url) DO UPDATE SET
-                        title = EXCLUDED.title,
-                        summary = EXCLUDED.summary,
-                        source = EXCLUDED.source,
-                        category = EXCLUDED.category,
-                        image = EXCLUDED.image,
-                        published_at = EXCLUDED.published_at,
-                        synced_at = NOW()
-                    """,
-                    (
-                        article["url"],
-                        article["title"],
-                        article.get("summary", ""),
-                        article.get("source", ""),
-                        article.get("category", "brasil"),
-                        article.get("image", ""),
-                        article.get("published_at"),
-                    ),
-                )
-                upserted += 1
+        for statement in SCHEMA_STATEMENTS:
+            conn.run(statement)
 
-            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-            cur.execute("DELETE FROM articles WHERE synced_at < %s", (cutoff,))
-        conn.commit()
+        for article in articles:
+            conn.run(
+                """
+                INSERT INTO articles (url, title, summary, source, category, image, published_at, synced_at)
+                VALUES (:url, :title, :summary, :source, :category, :image, :published_at, NOW())
+                ON CONFLICT (url) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    summary = EXCLUDED.summary,
+                    source = EXCLUDED.source,
+                    category = EXCLUDED.category,
+                    image = EXCLUDED.image,
+                    published_at = EXCLUDED.published_at,
+                    synced_at = NOW()
+                """,
+                url=article["url"],
+                title=article["title"],
+                summary=article.get("summary", ""),
+                source=article.get("source", ""),
+                category=article.get("category", "brasil"),
+                image=article.get("image", ""),
+                published_at=article.get("published_at"),
+            )
+            upserted += 1
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        conn.run("DELETE FROM articles WHERE synced_at < :cutoff", cutoff=cutoff)
     finally:
         conn.close()
     return upserted
